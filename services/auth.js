@@ -15,20 +15,43 @@ class AuthService {
   constructor() {
     this.tokenCache = new Map();
     this.tokenExpiry = new Map();
+    this.requestQueue = [];
+    this.isProcessing = false;
+    this.lastRequestTime = 0;
+    this.minRequestInterval = 100; // Minimum 100ms between requests
   }
 
   /**
-   * Get worker token for PingOne API access
+   * Throttle requests to avoid rate limiting
+   * @param {Function} requestFn - The request function to throttle
+   * @returns {Promise} Throttled request result
+   */
+  async throttleRequest(requestFn) {
+    const now = Date.now();
+    const timeSinceLastRequest = now - this.lastRequestTime;
+    
+    if (timeSinceLastRequest < this.minRequestInterval) {
+      const delay = this.minRequestInterval - timeSinceLastRequest;
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+    
+    this.lastRequestTime = Date.now();
+    return requestFn();
+  }
+
+  /**
+   * Get worker token from PingOne with throttling and retry logic
    * @param {string} environmentId - PingOne environment ID
    * @param {string} clientId - PingOne client ID
    * @param {string} clientSecret - PingOne client secret
+   * @param {number} retryCount - Current retry attempt
    * @returns {Promise<string>} Access token
    */
-  async getWorkerToken(environmentId, clientId, clientSecret) {
-    const cacheKey = `${environmentId}:${clientId}`;
+  async getWorkerToken(environmentId, clientId, clientSecret, retryCount = 0) {
+    const cacheKey = `${environmentId}:${clientId}:${clientSecret}`;
     const now = Date.now();
-    
-    // Check if we have a valid cached token
+
+    // Check cache first
     if (this.tokenCache.has(cacheKey)) {
       const expiry = this.tokenExpiry.get(cacheKey);
       if (expiry && expiry > now) {
@@ -36,38 +59,49 @@ class AuthService {
       }
     }
 
-    try {
-      const tokenUrl = `${config.pingone.authUri}/${environmentId}/as/token`;
-      const params = new URLSearchParams();
-      params.append('grant_type', 'client_credentials');
-      params.append('scope', config.pingone.scopes);
+    return this.throttleRequest(async () => {
+      try {
+        const tokenUrl = `${config.pingone.authUri}/${environmentId}/as/token`;
+        const params = new URLSearchParams();
+        params.append('grant_type', 'client_credentials');
+        params.append('scope', config.pingone.scopes);
 
-      const response = await axios.post(tokenUrl, params, {
-        auth: {
-          username: clientId,
-          password: clientSecret
-        },
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        timeout: 10000 // 10 second timeout
-      });
+        const response = await axios.post(tokenUrl, params, {
+          auth: {
+            username: clientId,
+            password: clientSecret
+          },
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+          },
+          timeout: 10000 // 10 second timeout
+        });
 
-      const { access_token, expires_in } = response.data;
-      
-      if (!access_token) {
-        throw new Error('No access token received from PingOne');
+        const { access_token, expires_in } = response.data;
+        
+        if (!access_token) {
+          throw new Error('No access token received from PingOne');
+        }
+
+        // Cache the token with expiry
+        this.tokenCache.set(cacheKey, access_token);
+        this.tokenExpiry.set(cacheKey, now + (expires_in * 1000) - 60000); // Expire 1 minute early
+
+        return access_token;
+      } catch (error) {
+        // Handle 429 errors with exponential backoff
+        if (error.response && error.response.status === 429 && retryCount < 3) {
+          const backoffDelay = Math.pow(2, retryCount) * 1000; // 1s, 2s, 4s
+          console.warn(`Rate limited (429). Retrying in ${backoffDelay}ms (attempt ${retryCount + 1}/3)`);
+          
+          await new Promise(resolve => setTimeout(resolve, backoffDelay));
+          return this.getWorkerToken(environmentId, clientId, clientSecret, retryCount + 1);
+        }
+        
+        this.clearCache(cacheKey);
+        throw this.handleAuthError(error);
       }
-
-      // Cache the token with expiry
-      this.tokenCache.set(cacheKey, access_token);
-      this.tokenExpiry.set(cacheKey, now + (expires_in * 1000) - 60000); // Expire 1 minute early
-
-      return access_token;
-    } catch (error) {
-      this.clearCache(cacheKey);
-      throw this.handleAuthError(error);
-    }
+    });
   }
 
   /**

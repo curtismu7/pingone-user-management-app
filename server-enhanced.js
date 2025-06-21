@@ -260,6 +260,45 @@ app.post('/get-environment-details', authRateLimiter, validateInput, async (req,
   }
 });
 
+// Add throttling utility for bulk operations
+function throttle(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// Throttled user creation with exponential backoff
+async function createUserWithRetry(user, environmentId, accessToken, retryCount = 0) {
+  try {
+    return await createUser(user, environmentId, accessToken);
+  } catch (error) {
+    // Handle 429 errors with exponential backoff
+    if (error.response && error.response.status === 429 && retryCount < 3) {
+      const backoffDelay = Math.pow(2, retryCount) * 1000; // 1s, 2s, 4s
+      console.warn(`Rate limited during user creation. Retrying in ${backoffDelay}ms (attempt ${retryCount + 1}/3)`);
+      
+      await throttle(backoffDelay);
+      return createUserWithRetry(user, environmentId, accessToken, retryCount + 1);
+    }
+    throw error;
+  }
+}
+
+// Throttled user deletion with exponential backoff
+async function deleteUserWithRetry(userId, environmentId, accessToken, retryCount = 0) {
+  try {
+    return await deleteUser(userId, environmentId, accessToken);
+  } catch (error) {
+    // Handle 429 errors with exponential backoff
+    if (error.response && error.response.status === 429 && retryCount < 3) {
+      const backoffDelay = Math.pow(2, retryCount) * 1000; // 1s, 2s, 4s
+      console.warn(`Rate limited during user deletion. Retrying in ${backoffDelay}ms (attempt ${retryCount + 1}/3)`);
+      
+      await throttle(backoffDelay);
+      return deleteUserWithRetry(userId, environmentId, accessToken, retryCount + 1);
+    }
+    throw error;
+  }
+}
+
 // Enhanced user import endpoint with security
 app.post('/import-users', uploadRateLimiter, upload.single('csv'), validateInput, async (req, res) => {
   const mode = req.body.mode || 'import';
@@ -326,9 +365,14 @@ app.post('/import-users', uploadRateLimiter, upload.single('csv'), validateInput
         const user = users[i];
         // Simulate logic: try to create, if exists, modify, else skip
         // For demo, treat all as added
-        await createUser(user, environmentId, accessToken);
+        await createUserWithRetry(user, environmentId, accessToken);
         addedCount++;
         logStatus(`/import-users | user_${i + 1}_added | ${user.username || user.email}`);
+        
+        // Add small delay between requests to avoid rate limiting
+        if (i < users.length - 1) {
+          await throttle(200); // 200ms delay between user creations
+        }
       } catch (error) {
         errorCount++;
         const errorMsg = `User ${i + 1} (${users[i].username || users[i].email}): ${error.message}`;
@@ -482,9 +526,14 @@ app.post('/delete-users', uploadRateLimiter, upload.single('csv'), validateInput
         const user = users[i];
         const userId = await findUserByUsername(user.username, environmentId, accessToken);
         if (userId) {
-          await deleteUser(userId, environmentId, accessToken);
+          await deleteUserWithRetry(userId, environmentId, accessToken);
           deletedCount++;
           logStatus(`/delete-users | user_${i + 1}_deleted | ${user.username}`);
+          
+          // Add small delay between requests to avoid rate limiting
+          if (i < users.length - 1) {
+            await throttle(200); // 200ms delay between user deletions
+          }
         } else {
           skippedCount++;
           logStatus(`/delete-users | user_${i + 1}_skipped | ${user.username}`);

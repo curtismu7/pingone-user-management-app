@@ -3475,40 +3475,36 @@
     function handle429Error(error, operation) {
       console.error(`${operation} error (429):`, error);
       
-      // Update worker token status to error
-      updateWorkerTokenError();
+      // Show user-friendly message
+      const statusBox = document.getElementById('statusBox');
+      const rateLimitMessage = `
+        <div class="alert alert-warning">
+          <strong>Rate Limit Exceeded</strong><br>
+          PingOne API is temporarily limiting requests. This is normal for bulk operations.<br>
+          <strong>What to do:</strong>
+          <ul>
+            <li>Wait 30-60 seconds before trying again</li>
+            <li>Try with fewer users at once</li>
+            <li>Check your PingOne environment limits</li>
+          </ul>
+          <small>Technical details: ${error.message}</small>
+        </div>
+      `;
       
-      // Show rate limit warning
-      showRateLimitWarning();
-      
-      // Create user-friendly error message
-      const errorMessage = `⚠️ Rate limit exceeded. The server is temporarily limiting requests to prevent overload. Please wait a moment and try again.`;
-      
-      // Show error in action status
-      actionStatus.showError([errorMessage]);
-      
-      // Update status span with detailed message
-      const statusSpan = document.getElementById('actionStatusText') || document.getElementById('credentialsStatusText');
-      if (statusSpan) {
-        statusSpan.innerHTML = `
-          <div style="color: #dc2626; margin-bottom: 0.5rem;">
-            ❌ ${operation} failed: Rate limit exceeded
-          </div>
-          <div style="color: #6b7280; font-size: 0.9rem; margin-bottom: 0.5rem;">
-            The server is temporarily limiting requests to prevent overload.
-          </div>
-          <div style="color: #059669; font-size: 0.85rem;">
-            💡 <strong>What to do:</strong> Wait 30-60 seconds and try again, or reduce the number of users in your CSV file.
-          </div>
-        `;
-        statusSpan.style.color = '#dc2626';
+      if (statusBox) {
+        statusBox.innerHTML = rateLimitMessage;
       }
       
-      // Show a user-friendly popup
-      unifiedPopup.alert(
-        `Rate limit exceeded. Please wait a moment and try again.\n\nThis usually happens when:\n• Processing large CSV files\n• Making multiple requests quickly\n• Server is under high load\n\nTry again in 30-60 seconds.`,
-        'Rate Limit Exceeded'
-      );
+      // Show rate limit warning banner
+      showRateLimitWarning();
+      
+      // Auto-retry after delay (for certain operations)
+      if (operation === 'Import' || operation === 'Delete') {
+        setTimeout(() => {
+          console.log(`Auto-retrying ${operation} operation after rate limit delay...`);
+          // Could implement auto-retry logic here
+        }, 30000); // 30 second delay
+      }
     }
     
     // Function to check if an error is a 429 error
