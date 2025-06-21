@@ -12,12 +12,13 @@
     "axios": "^1.10.0",
     "cors": "^2.8.5",
     "express": "^5.1.0",
-    "http-server": "^14.1.0",
     "multer": "^2.0.1",
     "papaparse": "^5.5.3"
   },
   "scripts": {
     "start": "node server.js",
+    "dev": "node server.js",
+    "server": "node server.js",
     "build": "cp node_modules/@ping-identity/p14c-js-sdk-auth/dist/browser/@ping-identity/p14c-js-sdk-auth.js p14c-js-sdk-auth.js"
   },
   "ignore": [

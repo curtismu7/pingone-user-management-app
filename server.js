@@ -1,3 +1,20 @@
+/**
+ * PingOne User Management Application - Node.js Server
+ * 
+ * ⚠️ IMPORTANT: This application MUST run on this Node.js server.
+ * Do NOT use http-server or any static file server.
+ * 
+ * This server provides:
+ * - PingOne API authentication endpoints
+ * - User import/delete/modify operations
+ * - File upload handling
+ * - Real-time logging and status tracking
+ * - CORS support for cross-origin requests
+ * 
+ * To run: npm start (which executes: node server.js)
+ * Server runs on: http://localhost:3001
+ */
+
 const express = require('express');
 const multer = require('multer');
 const Papa = require('papaparse');
