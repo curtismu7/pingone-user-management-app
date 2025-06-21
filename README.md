@@ -2,7 +2,7 @@
 
 # OIDC Authentication JavaScript Sample Guide
 The PingOne Authentication Sample is built on top of [OpenID Connect/OAuth 2 API endpoints](https://apidocs.pingidentity.com/pingone/platform/v1/api/) to give 
-you a basic overview how invoke PingOne’s OIDC protocol to authenticate an existing user. 
+you a basic overview how invoke PingOne's OIDC protocol to authenticate an existing user. 
 This example shows you how to 
 use [@ping-identity/p14c-js-sdk-auth](https://www.npmjs.com/package/@ping-identity/p14c-js-sdk-auth) library to login a user to your JavaScript application through the [implicit flow](https://openid.net/specs/openid-connect-implicit-1_0.html), where the user is redirected to the PingOne hosted login page.  
 After the successful authentication the user is redirected back to the application with an ID and access token.
@@ -18,7 +18,7 @@ The client application then becomes a consumer of the identity API. One major be
 ## Prerequisites
 You will need the following things:
  
-- PingOne Account  - If you don’t have an existing one, please register it.
+- PingOne Account  - If you don't have an existing one, please register it.
 - An OpenID Connect Application, configured as a for `Single Page` app (SPA) type. Documentation for creating one can be found [here](https://docs.pingidentity.com/r/en-us/pingone/p1_add_app_worker).  Please ensure the following configuration items (which are also set in this example) are applied to the application in the admin console:
   - **Response Type** : `Token` and `ID Token`
   - **Grant Type** : `Implicit`
@@ -147,3 +147,136 @@ Your application sends the `state` (randomly generated value) when starting an a
  then you may be the target of an attack because this is either a response for an unsolicited request or someone trying to forge the response.
  Your application also sends the `state` parameter to maintain state between the logout request and the callback to the endpoint specified by the `post_logout_redirectUri query` parameter.
 1. For styling the [shoelace CSS library](https://shoelace.style/) was used, and [http-server](https://www.npmjs.com/package/http-server) - as a command-line http server.
+
+# PingOne User Management Application
+
+A web application for managing PingOne users with import, delete, and modify capabilities. This application provides a user-friendly interface for bulk user operations in PingOne environments.
+
+## ⚠️ Important: Server Requirements
+
+**This application MUST run on a Node.js server, NOT a static HTTP server.**
+
+- ✅ **Correct**: `npm start` (runs `node server.js` on port 3001)
+- ❌ **Incorrect**: `http-server` or any static file server
+
+The application requires the Node.js backend server to handle:
+- PingOne API authentication
+- User import operations
+- User deletion operations  
+- User modification operations
+- Logging and status tracking
+
+## Prerequisites
+
+You will need the following:
+- [Node.js](https://nodejs.org/en/download/) (v14 or higher)
+- A PingOne account with admin access
+- PingOne environment ID, client ID, and client secret
+- A PingOne worker application configured for API access
+
+## Installation
+
+1. Clone or download this repository
+2. Install dependencies:
+```bash
+npm install
+```
+
+## Configuration
+
+1. Open the application in your browser (after starting the server)
+2. Go to the **Settings** page
+3. Enter your PingOne credentials:
+   - **Environment ID**: Your PingOne environment ID
+   - **Client ID**: Your PingOne worker application client ID  
+   - **Client Secret**: Your PingOne worker application client secret
+4. Click **Save** to store your credentials
+
+## Running the Application
+
+**Always use the Node.js server:**
+
+```bash
+npm start
+```
+
+The application will be available at: **http://localhost:3001**
+
+**Do NOT use:**
+- `http-server` 
+- Any static file server
+- Opening HTML files directly in the browser
+
+## Features
+
+### Main Page (`/`)
+- **Import Users**: Bulk import users from CSV files
+- **Delete Users**: Bulk delete users from CSV files  
+- **Modify Users**: Bulk modify user attributes from CSV files
+- **Test Credentials**: Validate PingOne connection
+- **Real-time Status**: Live progress tracking and operation summaries
+
+### Settings Page (`/settings.html`)
+- **Credential Management**: Store and manage PingOne credentials
+- **Form Persistence**: Remember settings across sessions
+- **Token Validation**: Test and validate API access
+
+## CSV File Format
+
+The application supports CSV files with the following columns:
+- `username` (required)
+- `email` (required)
+- `givenName` (optional)
+- `familyName` (optional)
+- `enabled` (optional, true/false)
+
+## API Endpoints
+
+The Node.js server provides these endpoints:
+- `POST /get-worker-token` - Validate credentials and get access token
+- `POST /import-users` - Import users from CSV
+- `POST /delete-users` - Delete users from CSV
+- `POST /modify-users` - Modify users from CSV
+- `GET /import-status-log` - Get operation logs
+- `GET /download-log` - Download log file
+- `POST /clear-log` - Clear log file
+
+## Troubleshooting
+
+### Common Issues
+
+1. **"Cannot GET /get-worker-token" errors**
+   - **Solution**: Make sure you're running `npm start` (Node.js server), not `http-server`
+
+2. **Credential validation fails**
+   - Check your Environment ID, Client ID, and Client Secret
+   - Ensure your PingOne worker application has the correct permissions
+   - Verify your PingOne environment is active
+
+3. **Import/Delete/Modify operations fail**
+   - Validate credentials first using the "Test Credentials" button
+   - Check your CSV file format
+   - Review the operation logs for specific error details
+
+### Server Status
+
+To verify the correct server is running:
+```bash
+# Should show "Server running on http://localhost:3001"
+npm start
+
+# Check if server is responding
+curl http://localhost:3001/
+```
+
+## Development
+
+For development, you can also use:
+```bash
+npm run dev    # Same as npm start
+npm run server # Same as npm start
+```
+
+## License
+
+This project is licensed under the MIT License.

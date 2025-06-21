@@ -1,3 +1,11 @@
+# PingOne User Management Application
+# 
+# ⚠️ IMPORTANT: This application MUST run on a Node.js server (node server.js)
+# Do NOT use http-server or any static file server.
+# 
+# To run: npm start (which executes: node server.js)
+# Server runs on: http://localhost:3001
+
 # Logs
 logs
 *.log
