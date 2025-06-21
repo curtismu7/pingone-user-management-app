@@ -799,6 +799,7 @@
           <button class="unified-button" onclick="modifyCSVUsers()" id="modifyUsersBtn">Modify Users</button>
           <button class="unified-button" onclick="window.open('settings.html', '_blank')" id="settingsBtn">Settings</button>
           <button class="unified-button" onclick="testStatusBox()" style="background: #6b7280;" onmouseover="this.style.background='#4b5563'" onmouseout="this.style.background='#6b7280'">Test Status Box</button>
+          <button class="unified-button" onclick="clearAllSettings()" style="background: #dc2626;" onmouseover="this.style.background='#b91c1c'" onmouseout="this.style.background='#dc2626'">Clear All Settings</button>
         </div>
       </div>
       
@@ -1498,21 +1499,8 @@
 
     // Preload credentials from localStorage on page load
     window.addEventListener('DOMContentLoaded', function() {
-      if (localStorage.getItem('envId')) {
-        document.getElementById('envIdInput').value = localStorage.getItem('envId');
-        document.getElementById('saveAllCredentials').checked = true;
-      }
-      if (localStorage.getItem('clientId')) {
-        document.getElementById('clientIdInput').value = localStorage.getItem('clientId');
-        document.getElementById('saveAllCredentials').checked = true;
-      }
-      if (localStorage.getItem('clientSecret')) {
-        document.getElementById('clientSecretInput').value = localStorage.getItem('clientSecret');
-        document.getElementById('saveAllCredentials').checked = true;
-      }
-      
-      // Setup file name persistence and display
-      setupFileNamePersistence();
+      // Initialize the comprehensive form persistence system
+      formPersistence = new FormPersistence();
       
       // Setup password toggle functionality
       const toggleSecretBtn = document.getElementById('toggleSecretBtn');
@@ -1545,21 +1533,21 @@
       if (clearEnvIdBtn) {
         clearEnvIdBtn.addEventListener('click', function() {
           document.getElementById('envIdInput').value = '';
-          localStorage.removeItem('envId');
+          localStorage.removeItem('pingone_env_id');
         });
       }
       
       if (clearClientIdBtn) {
         clearClientIdBtn.addEventListener('click', function() {
           document.getElementById('clientIdInput').value = '';
-          localStorage.removeItem('clientId');
+          localStorage.removeItem('pingone_client_id');
         });
       }
       
       if (clearClientSecretBtn) {
         clearClientSecretBtn.addEventListener('click', function() {
           document.getElementById('clientSecretInput').value = '';
-          localStorage.removeItem('clientSecret');
+          localStorage.removeItem('pingone_client_secret');
         });
       }
       
@@ -1793,6 +1781,258 @@
         }, 200);
       }, 1000);
     }
+
+    // Comprehensive Form Persistence System
+    class FormPersistence {
+      constructor() {
+        this.storagePrefix = 'pingone_';
+        this.formElements = new Map();
+        this.init();
+      }
+      
+      init() {
+        this.setupFormElements();
+        this.setupEventListeners();
+        this.restoreFormState();
+      }
+      
+      setupFormElements() {
+        // Text inputs
+        this.addElement('envIdInput', 'env_id', 'text');
+        this.addElement('clientIdInput', 'client_id', 'text');
+        this.addElement('clientSecretInput', 'client_secret', 'text');
+        
+        // Checkboxes
+        this.addElement('saveAllCredentials', 'save_all_credentials', 'checkbox');
+        this.addElement('rememberClientSecret', 'remember_client_secret', 'checkbox');
+        this.addElement('saveFileNameCheckbox', 'save_file_name', 'checkbox');
+        
+        // File input (special handling)
+        this.addElement('csvFile', 'csv_file_name', 'file');
+      }
+      
+      addElement(elementId, storageKey, type) {
+        const element = document.getElementById(elementId);
+        if (element) {
+          this.formElements.set(elementId, {
+            element: element,
+            storageKey: this.storagePrefix + storageKey,
+            type: type
+          });
+        }
+      }
+      
+      setupEventListeners() {
+        this.formElements.forEach((config, elementId) => {
+          const { element, storageKey, type } = config;
+          
+          if (type === 'text' || type === 'password') {
+            // Save on input and change
+            element.addEventListener('input', () => this.saveElement(elementId));
+            element.addEventListener('change', () => this.saveElement(elementId));
+          } else if (type === 'checkbox') {
+            // Save on change
+            element.addEventListener('change', () => this.saveElement(elementId));
+          } else if (type === 'file') {
+            // Special handling for file input
+            element.addEventListener('change', () => this.handleFileSelection());
+          }
+        });
+        
+        // Special handling for credential fields - save based on checkbox state
+        const credentialFields = ['envIdInput', 'clientIdInput', 'clientSecretInput'];
+        credentialFields.forEach(fieldId => {
+          const element = document.getElementById(fieldId);
+          if (element) {
+            element.addEventListener('input', () => this.handleCredentialFieldChange(fieldId));
+            element.addEventListener('change', () => this.handleCredentialFieldChange(fieldId));
+          }
+        });
+      }
+      
+      handleCredentialFieldChange(fieldId) {
+        const saveAllBox = document.getElementById('saveAllCredentials');
+        if (saveAllBox && saveAllBox.checked) {
+          this.saveElement(fieldId);
+        }
+      }
+      
+      handleFileSelection() {
+        const csvFileInput = document.getElementById('csvFile');
+        const saveFileNameCheckbox = document.getElementById('saveFileNameCheckbox');
+        
+        if (csvFileInput.files && csvFileInput.files.length > 0) {
+          const fileName = csvFileInput.files[0].name;
+          
+          // Update display
+          const selectedFileNameDisplay = document.getElementById('selectedFileNameDisplay');
+          const selectedFileNameText = document.getElementById('selectedFileNameText');
+          
+          if (selectedFileNameDisplay && selectedFileNameText) {
+            selectedFileNameText.textContent = `Selected: ${fileName}`;
+            selectedFileNameDisplay.style.display = 'block';
+          }
+          
+          // Save based on checkbox state
+          if (saveFileNameCheckbox && saveFileNameCheckbox.checked) {
+            localStorage.setItem(this.storagePrefix + 'csv_file_name', fileName);
+            sessionStorage.removeItem('temp_csv_file_name');
+          } else {
+            sessionStorage.setItem('temp_csv_file_name', fileName);
+            localStorage.removeItem(this.storagePrefix + 'csv_file_name');
+          }
+        } else {
+          // Clear display and storage
+          const selectedFileNameDisplay = document.getElementById('selectedFileNameDisplay');
+          if (selectedFileNameDisplay) {
+            selectedFileNameDisplay.style.display = 'none';
+          }
+          localStorage.removeItem(this.storagePrefix + 'csv_file_name');
+          sessionStorage.removeItem('temp_csv_file_name');
+        }
+      }
+      
+      saveElement(elementId) {
+        const config = this.formElements.get(elementId);
+        if (!config) return;
+        
+        const { element, storageKey, type } = config;
+        
+        if (type === 'text' || type === 'password') {
+          localStorage.setItem(storageKey, element.value);
+        } else if (type === 'checkbox') {
+          localStorage.setItem(storageKey, element.checked.toString());
+        }
+      }
+      
+      restoreFormState() {
+        this.formElements.forEach((config, elementId) => {
+          const { element, storageKey, type } = config;
+          
+          if (type === 'text' || type === 'password') {
+            const savedValue = localStorage.getItem(storageKey);
+            if (savedValue) {
+              element.value = savedValue;
+            }
+          } else if (type === 'checkbox') {
+            const savedValue = localStorage.getItem(storageKey);
+            if (savedValue !== null) {
+              element.checked = savedValue === 'true';
+            }
+          }
+        });
+        
+        // Special handling for file name restoration
+        this.restoreFileName();
+      }
+      
+      restoreFileName() {
+        const selectedFileNameDisplay = document.getElementById('selectedFileNameDisplay');
+        const selectedFileNameText = document.getElementById('selectedFileNameText');
+        const saveFileNameCheckbox = document.getElementById('saveFileNameCheckbox');
+        
+        // First check localStorage for persistent file name
+        let fileName = localStorage.getItem(this.storagePrefix + 'csv_file_name');
+        if (fileName) {
+          if (selectedFileNameText) {
+            selectedFileNameText.textContent = `Selected: ${fileName}`;
+          }
+          if (selectedFileNameDisplay) {
+            selectedFileNameDisplay.style.display = 'block';
+          }
+          if (saveFileNameCheckbox) {
+            saveFileNameCheckbox.checked = true;
+          }
+          return;
+        }
+        
+        // Then check sessionStorage for temporary file name
+        fileName = sessionStorage.getItem('temp_csv_file_name');
+        if (fileName) {
+          if (selectedFileNameText) {
+            selectedFileNameText.textContent = `Selected: ${fileName}`;
+          }
+          if (selectedFileNameDisplay) {
+            selectedFileNameDisplay.style.display = 'block';
+          }
+          if (saveFileNameCheckbox) {
+            saveFileNameCheckbox.checked = false;
+          }
+          return;
+        }
+        
+        // No saved file name
+        if (selectedFileNameDisplay) {
+          selectedFileNameDisplay.style.display = 'none';
+        }
+      }
+      
+      clearAllSettings() {
+        // Clear all localStorage items with our prefix
+        Object.keys(localStorage).forEach(key => {
+          if (key.startsWith(this.storagePrefix)) {
+            localStorage.removeItem(key);
+          }
+        });
+        
+        // Clear sessionStorage items
+        sessionStorage.removeItem('temp_csv_file_name');
+        
+        // Reset form elements
+        this.formElements.forEach((config, elementId) => {
+          const { element, type } = config;
+          
+          if (type === 'text' || type === 'password') {
+            element.value = '';
+          } else if (type === 'checkbox') {
+            element.checked = false;
+          }
+        });
+        
+        // Clear file input and display
+        const csvFileInput = document.getElementById('csvFile');
+        if (csvFileInput) {
+          csvFileInput.value = '';
+        }
+        
+        const selectedFileNameDisplay = document.getElementById('selectedFileNameDisplay');
+        if (selectedFileNameDisplay) {
+          selectedFileNameDisplay.style.display = 'none';
+        }
+        
+        // Reset credential validation status
+        window.credentialsValidated = false;
+        const statusSpan = document.getElementById('credentialsStatus');
+        if (statusSpan) {
+          statusSpan.textContent = 'Credentials not validated';
+          statusSpan.style.color = '#6b7280';
+        }
+        
+        console.log('All settings cleared successfully');
+      }
+    }
+
+    // Create global instance
+    let formPersistence;
+
+    // Function to clear all settings
+    function clearAllSettings() {
+      if (confirm('Are you sure you want to clear all settings? This will reset all form fields, checkboxes, and saved data. This action cannot be undone.')) {
+        if (formPersistence) {
+          formPersistence.clearAllSettings();
+        }
+        alert('All settings have been cleared successfully!');
+      }
+    }
+
+    // Listen for storage events to sync file names across tabs/windows
+    window.addEventListener('storage', function(e) {
+      if (e.key === 'pingone_csv_file_name' || e.key === 'temp_csv_file_name') {
+        if (formPersistence) {
+          formPersistence.restoreFileName();
+        }
+      }
+    });
   </script>
 </body>
 </html>

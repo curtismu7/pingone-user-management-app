@@ -1194,375 +1194,363 @@
     // Global variable to track credential validation status
     window.credentialsValidated = false;
     
-    // Comprehensive Form Persistence System for Settings Page
+    // Comprehensive Form Persistence System for Settings
     class SettingsFormPersistence {
       constructor() {
-        this.storageKey = 'pingone_settings_form_state';
-        this.autoSaveDelay = 500; // ms
-        this.autoSaveTimer = null;
+        this.storagePrefix = 'pingone_';
+        this.formElements = new Map();
+        this.init();
       }
       
-      // Save all form state to localStorage
-      saveFormState() {
-        const formState = {
-          timestamp: Date.now(),
-          credentials: this.getCredentialsState(),
-          fileSelection: this.getFileSelectionState(),
-          checkboxes: this.getCheckboxState(),
-          selects: this.getSelectState(),
-          numbers: this.getNumberState(),
-          textInputs: this.getTextInputState(),
-          radioButtons: this.getRadioButtonState(),
-          modifyAttributes: this.getModifyAttributesState()
-        };
+      init() {
+        this.setupFormElements();
+        this.setupEventListeners();
+        this.restoreFormState();
+      }
+      
+      setupFormElements() {
+        // Text inputs
+        this.addElement('settingsEnvId', 'env_id', 'text');
+        this.addElement('settingsClientId', 'client_id', 'text');
+        this.addElement('settingsClientSecret', 'client_secret', 'text');
+        this.addElement('settingsApiBaseUrl', 'api_base_url', 'text');
+        this.addElement('settingsResultsPageSize', 'results_page_size', 'number');
         
-        try {
-          localStorage.setItem(this.storageKey, JSON.stringify(formState));
-          console.log('Settings form state saved successfully');
-        } catch (error) {
-          console.error('Error saving settings form state:', error);
+        // Select dropdowns
+        this.addElement('settingsLanguage', 'language', 'select');
+        
+        // Checkboxes
+        this.addElement('settingsSaveAllCredentials', 'save_all_credentials', 'checkbox');
+        this.addElement('settingsRememberClientSecret', 'remember_client_secret', 'checkbox');
+        this.addElement('saveFileNameCheckbox', 'save_file_name', 'checkbox');
+        this.addElement('settingsModifyAttributes', 'modify_attributes', 'checkbox');
+        
+        // Modify attribute checkboxes
+        this.addElement('modAttrSelectAll', 'mod_attr_select_all', 'checkbox');
+        this.addElement('modAttrFirstName', 'mod_attr_first_name', 'checkbox');
+        this.addElement('modAttrLastName', 'mod_attr_last_name', 'checkbox');
+        this.addElement('modAttrEmail', 'mod_attr_email', 'checkbox');
+        this.addElement('modAttrUsername', 'mod_attr_username', 'checkbox');
+        this.addElement('modAttrPassword', 'mod_attr_password', 'checkbox');
+        this.addElement('modAttrPopulation', 'mod_attr_population', 'checkbox');
+        this.addElement('modAttrActive', 'mod_attr_active', 'checkbox');
+        this.addElement('modAttrTitle', 'mod_attr_title', 'checkbox');
+        this.addElement('modAttrPhone', 'mod_attr_phone', 'checkbox');
+        this.addElement('modAttrAddress', 'mod_attr_address', 'checkbox');
+        this.addElement('modAttrLocale', 'mod_attr_locale', 'checkbox');
+        this.addElement('modAttrTimezone', 'mod_attr_timezone', 'checkbox');
+        this.addElement('modAttrExternalId', 'mod_attr_external_id', 'checkbox');
+        this.addElement('modAttrType', 'mod_attr_type', 'checkbox');
+        this.addElement('modAttrNickname', 'mod_attr_nickname', 'checkbox');
+        
+        // File input (special handling)
+        this.addElement('settingsDefaultFile', 'csv_file_name', 'file');
+      }
+      
+      addElement(elementId, storageKey, type) {
+        const element = document.getElementById(elementId);
+        if (element) {
+          this.formElements.set(elementId, {
+            element: element,
+            storageKey: this.storagePrefix + storageKey,
+            type: type
+          });
         }
       }
       
-      // Restore all form state from localStorage
+      setupEventListeners() {
+        this.formElements.forEach((config, elementId) => {
+          const { element, storageKey, type } = config;
+          
+          if (type === 'text' || type === 'password' || type === 'number') {
+            // Save on input and change
+            element.addEventListener('input', () => this.saveElement(elementId));
+            element.addEventListener('change', () => this.saveElement(elementId));
+          } else if (type === 'checkbox') {
+            // Save on change
+            element.addEventListener('change', () => this.saveElement(elementId));
+          } else if (type === 'select') {
+            // Save on change
+            element.addEventListener('change', () => this.saveElement(elementId));
+          } else if (type === 'file') {
+            // Special handling for file input
+            element.addEventListener('change', () => this.handleFileSelection());
+          }
+        });
+        
+        // Special handling for credential fields - save based on checkbox state
+        const credentialFields = ['settingsEnvId', 'settingsClientId', 'settingsClientSecret'];
+        credentialFields.forEach(fieldId => {
+          const element = document.getElementById(fieldId);
+          if (element) {
+            element.addEventListener('input', () => this.handleCredentialFieldChange(fieldId));
+            element.addEventListener('change', () => this.handleCredentialFieldChange(fieldId));
+          }
+        });
+        
+        // Special handling for "Select All" checkbox
+        const selectAllCheckbox = document.getElementById('modAttrSelectAll');
+        if (selectAllCheckbox) {
+          selectAllCheckbox.addEventListener('change', () => this.handleSelectAllChange());
+        }
+      }
+      
+      handleCredentialFieldChange(fieldId) {
+        const saveAllBox = document.getElementById('settingsSaveAllCredentials');
+        if (saveAllBox && saveAllBox.checked) {
+          this.saveElement(fieldId);
+        }
+      }
+      
+      handleSelectAllChange() {
+        const selectAllCheckbox = document.getElementById('modAttrSelectAll');
+        const attributeCheckboxes = [
+          'modAttrFirstName', 'modAttrLastName', 'modAttrEmail', 'modAttrUsername',
+          'modAttrPassword', 'modAttrPopulation', 'modAttrActive', 'modAttrTitle',
+          'modAttrPhone', 'modAttrAddress', 'modAttrLocale', 'modAttrTimezone',
+          'modAttrExternalId', 'modAttrType', 'modAttrNickname'
+        ];
+        
+        attributeCheckboxes.forEach(attrId => {
+          const checkbox = document.getElementById(attrId);
+          if (checkbox) {
+            checkbox.checked = selectAllCheckbox.checked;
+            this.saveElement(attrId);
+          }
+        });
+      }
+      
+      handleFileSelection() {
+        const fileInput = document.getElementById('settingsDefaultFile');
+        const saveFileNameCheckbox = document.getElementById('saveFileNameCheckbox');
+        
+        if (fileInput.files && fileInput.files.length > 0) {
+          const fileName = fileInput.files[0].name;
+          
+          // Update display
+          const settingsSelectedFileNameDisplay = document.getElementById('settingsSelectedFileNameDisplay');
+          const settingsSelectedFileNameText = document.getElementById('settingsSelectedFileNameText');
+          const defaultFileName = document.getElementById('defaultFileName');
+          
+          if (settingsSelectedFileNameDisplay && settingsSelectedFileNameText) {
+            settingsSelectedFileNameText.textContent = `Selected: ${fileName}`;
+            settingsSelectedFileNameDisplay.style.display = 'block';
+          }
+          
+          if (defaultFileName) {
+            defaultFileName.textContent = fileName;
+          }
+          
+          // Save based on checkbox state
+          if (saveFileNameCheckbox && saveFileNameCheckbox.checked) {
+            localStorage.setItem(this.storagePrefix + 'csv_file_name', fileName);
+            sessionStorage.removeItem('temp_csv_file_name');
+          } else {
+            sessionStorage.setItem('temp_csv_file_name', fileName);
+            localStorage.removeItem(this.storagePrefix + 'csv_file_name');
+          }
+        } else {
+          // Clear display and storage
+          const settingsSelectedFileNameDisplay = document.getElementById('settingsSelectedFileNameDisplay');
+          if (settingsSelectedFileNameDisplay) {
+            settingsSelectedFileNameDisplay.style.display = 'none';
+          }
+          
+          const defaultFileName = document.getElementById('defaultFileName');
+          if (defaultFileName) {
+            defaultFileName.textContent = '';
+          }
+          
+          localStorage.removeItem(this.storagePrefix + 'csv_file_name');
+          sessionStorage.removeItem('temp_csv_file_name');
+        }
+      }
+      
+      saveElement(elementId) {
+        const config = this.formElements.get(elementId);
+        if (!config) return;
+        
+        const { element, storageKey, type } = config;
+        
+        if (type === 'text' || type === 'password' || type === 'number') {
+          localStorage.setItem(storageKey, element.value);
+        } else if (type === 'checkbox') {
+          localStorage.setItem(storageKey, element.checked.toString());
+        } else if (type === 'select') {
+          localStorage.setItem(storageKey, element.value);
+        }
+      }
+      
       restoreFormState() {
-        try {
-          const savedState = localStorage.getItem(this.storageKey);
-          if (!savedState) return false;
+        this.formElements.forEach((config, elementId) => {
+          const { element, storageKey, type } = config;
           
-          const formState = JSON.parse(savedState);
-          
-          // Restore each section
-          this.restoreCredentialsState(formState.credentials);
-          this.restoreFileSelectionState(formState.fileSelection);
-          this.restoreCheckboxState(formState.checkboxes);
-          this.restoreSelectState(formState.selects);
-          this.restoreNumberState(formState.numbers);
-          this.restoreTextInputState(formState.textInputs);
-          this.restoreRadioButtonState(formState.radioButtons);
-          this.restoreModifyAttributesState(formState.modifyAttributes);
-          
-          console.log('Settings form state restored successfully');
-          return true;
-        } catch (error) {
-          console.error('Error restoring settings form state:', error);
-          return false;
-        }
+          if (type === 'text' || type === 'password' || type === 'number') {
+            const savedValue = localStorage.getItem(storageKey);
+            if (savedValue) {
+              element.value = savedValue;
+            }
+          } else if (type === 'checkbox') {
+            const savedValue = localStorage.getItem(storageKey);
+            if (savedValue !== null) {
+              element.checked = savedValue === 'true';
+            }
+          } else if (type === 'select') {
+            const savedValue = localStorage.getItem(storageKey);
+            if (savedValue) {
+              element.value = savedValue;
+            }
+          }
+        });
+        
+        // Special handling for file name restoration
+        this.restoreFileName();
       }
       
-      // Get credentials state
-      getCredentialsState() {
-        const envIdInput = document.getElementById('settingsEnvId');
-        const clientIdInput = document.getElementById('settingsClientId');
-        const clientSecretInput = document.getElementById('settingsClientSecret');
-        const rememberSecretCheckbox = document.getElementById('settingsRememberClientSecret');
-        const saveAllCredentialsCheckbox = document.getElementById('settingsSaveAllCredentials');
-        
-        return {
-          envId: envIdInput ? envIdInput.value : '',
-          clientId: clientIdInput ? clientIdInput.value : '',
-          clientSecret: clientSecretInput ? clientSecretInput.value : '',
-          rememberSecret: rememberSecretCheckbox ? rememberSecretCheckbox.checked : false,
-          saveAllCredentials: saveAllCredentialsCheckbox ? saveAllCredentialsCheckbox.checked : false
-        };
-      }
-      
-      // Restore credentials state
-      restoreCredentialsState(state) {
-        if (!state) return;
-        
-        const envIdInput = document.getElementById('settingsEnvId');
-        const clientIdInput = document.getElementById('settingsClientId');
-        const clientSecretInput = document.getElementById('settingsClientSecret');
-        const rememberSecretCheckbox = document.getElementById('settingsRememberClientSecret');
-        const saveAllCredentialsCheckbox = document.getElementById('settingsSaveAllCredentials');
-        
-        if (envIdInput && state.envId) envIdInput.value = state.envId;
-        if (clientIdInput && state.clientId) clientIdInput.value = state.clientId;
-        if (clientSecretInput && state.clientSecret) clientSecretInput.value = state.clientSecret;
-        if (rememberSecretCheckbox) rememberSecretCheckbox.checked = state.rememberSecret;
-        if (saveAllCredentialsCheckbox) saveAllCredentialsCheckbox.checked = state.saveAllCredentials;
-      }
-      
-      // Get file selection state
-      getFileSelectionState() {
-        const defaultFileInput = document.getElementById('settingsDefaultFile');
+      restoreFileName() {
+        const settingsSelectedFileNameDisplay = document.getElementById('settingsSelectedFileNameDisplay');
+        const settingsSelectedFileNameText = document.getElementById('settingsSelectedFileNameText');
         const saveFileNameCheckbox = document.getElementById('saveFileNameCheckbox');
-        
-        return {
-          fileName: defaultFileInput && defaultFileInput.files.length > 0 ? defaultFileInput.files[0].name : '',
-          saveFileName: saveFileNameCheckbox ? saveFileNameCheckbox.checked : false
-        };
-      }
-      
-      // Restore file selection state
-      restoreFileSelectionState(state) {
-        if (!state) return;
-        
-        const saveFileNameCheckbox = document.getElementById('saveFileNameCheckbox');
-        if (saveFileNameCheckbox) saveFileNameCheckbox.checked = state.saveFileName;
-        
-        // Note: File input values cannot be programmatically set for security reasons
-        // But we can restore the checkbox state and update UI elements
-        this.updateFileDisplay(state.fileName);
-      }
-      
-      // Update file display elements
-      updateFileDisplay(fileName) {
-        const defaultFileInfo = document.getElementById('defaultFileInfo');
         const defaultFileName = document.getElementById('defaultFileName');
         
-        if (fileName && defaultFileInfo && defaultFileName) {
-          defaultFileInfo.style.display = 'block';
-          defaultFileName.textContent = fileName;
+        // First check localStorage for persistent file name
+        let fileName = localStorage.getItem(this.storagePrefix + 'csv_file_name');
+        if (fileName) {
+          if (settingsSelectedFileNameText) {
+            settingsSelectedFileNameText.textContent = `Selected: ${fileName}`;
+          }
+          if (settingsSelectedFileNameDisplay) {
+            settingsSelectedFileNameDisplay.style.display = 'block';
+          }
+          if (defaultFileName) {
+            defaultFileName.textContent = fileName;
+          }
+          if (saveFileNameCheckbox) {
+            saveFileNameCheckbox.checked = true;
+          }
+          return;
+        }
+        
+        // Then check sessionStorage for temporary file name
+        fileName = sessionStorage.getItem('temp_csv_file_name');
+        if (fileName) {
+          if (settingsSelectedFileNameText) {
+            settingsSelectedFileNameText.textContent = `Selected: ${fileName}`;
+          }
+          if (settingsSelectedFileNameDisplay) {
+            settingsSelectedFileNameDisplay.style.display = 'block';
+          }
+          if (defaultFileName) {
+            defaultFileName.textContent = fileName;
+          }
+          if (saveFileNameCheckbox) {
+            saveFileNameCheckbox.checked = false;
+          }
+          return;
+        }
+        
+        // No saved file name
+        if (settingsSelectedFileNameDisplay) {
+          settingsSelectedFileNameDisplay.style.display = 'none';
+        }
+        if (defaultFileName) {
+          defaultFileName.textContent = '';
         }
       }
       
-      // Get checkbox state
-      getCheckboxState() {
-        const checkboxes = document.querySelectorAll('input[type="checkbox"]');
-        const state = {};
-        
-        checkboxes.forEach(checkbox => {
-          if (checkbox.id) {
-            state[checkbox.id] = checkbox.checked;
+      clearAllSettings() {
+        // Clear all localStorage items with our prefix
+        Object.keys(localStorage).forEach(key => {
+          if (key.startsWith(this.storagePrefix)) {
+            localStorage.removeItem(key);
           }
         });
         
-        return state;
-      }
-      
-      // Restore checkbox state
-      restoreCheckboxState(state) {
-        if (!state) return;
+        // Clear sessionStorage items
+        sessionStorage.removeItem('temp_csv_file_name');
         
-        Object.keys(state).forEach(id => {
-          const checkbox = document.getElementById(id);
-          if (checkbox) {
-            checkbox.checked = state[id];
-          }
-        });
-      }
-      
-      // Get select state
-      getSelectState() {
-        const selects = document.querySelectorAll('select');
-        const state = {};
-        
-        selects.forEach(select => {
-          if (select.id) {
-            state[select.id] = select.value;
-          }
-        });
-        
-        return state;
-      }
-      
-      // Restore select state
-      restoreSelectState(state) {
-        if (!state) return;
-        
-        Object.keys(state).forEach(id => {
-          const select = document.getElementById(id);
-          if (select) {
-            select.value = state[id];
-          }
-        });
-      }
-      
-      // Get number input state
-      getNumberState() {
-        const numbers = document.querySelectorAll('input[type="number"]');
-        const state = {};
-        
-        numbers.forEach(number => {
-          if (number.id) {
-            state[number.id] = number.value;
-          }
-        });
-        
-        return state;
-      }
-      
-      // Restore number input state
-      restoreNumberState(state) {
-        if (!state) return;
-        
-        Object.keys(state).forEach(id => {
-          const number = document.getElementById(id);
-          if (number) {
-            number.value = state[id];
-          }
-        });
-      }
-      
-      // Get text input state
-      getTextInputState() {
-        const textInputs = document.querySelectorAll('input[type="text"], input[type="password"]');
-        const state = {};
-        
-        textInputs.forEach(input => {
-          if (input.id) {
-            state[input.id] = input.value;
-          }
-        });
-        
-        return state;
-      }
-      
-      // Restore text input state
-      restoreTextInputState(state) {
-        if (!state) return;
-        
-        Object.keys(state).forEach(id => {
-          const input = document.getElementById(id);
-          if (input) {
-            input.value = state[id];
-          }
-        });
-      }
-      
-      // Get radio button state
-      getRadioButtonState() {
-        const radioGroups = document.querySelectorAll('input[type="radio"]:checked');
-        const state = {};
-        
-        radioGroups.forEach(radio => {
-          if (radio.name) {
-            state[radio.name] = radio.value;
-          }
-        });
-        
-        return state;
-      }
-      
-      // Restore radio button state
-      restoreRadioButtonState(state) {
-        if (!state) return;
-        
-        Object.keys(state).forEach(name => {
-          const radio = document.querySelector(`input[type="radio"][name="${name}"][value="${state[name]}"]`);
-          if (radio) {
-            radio.checked = true;
-          }
-        });
-      }
-      
-      // Get modify attributes state
-      getModifyAttributesState() {
-        const modifyCheckboxes = document.querySelectorAll('.modify-attr-item input[type="checkbox"]');
-        const state = {};
-        
-        modifyCheckboxes.forEach(checkbox => {
-          if (checkbox.id) {
-            state[checkbox.id] = checkbox.checked;
-          }
-        });
-        
-        return state;
-      }
-      
-      // Restore modify attributes state
-      restoreModifyAttributesState(state) {
-        if (!state) return;
-        
-        Object.keys(state).forEach(id => {
-          const checkbox = document.getElementById(id);
-          if (checkbox) {
-            checkbox.checked = state[id];
-          }
-        });
-      }
-      
-      // Auto-save form state with debouncing
-      autoSave() {
-        clearTimeout(this.autoSaveTimer);
-        this.autoSaveTimer = setTimeout(() => {
-          this.saveFormState();
-        }, this.autoSaveDelay);
-      }
-      
-      // Set up event listeners for all form elements
-      setupEventListeners() {
-        const formElements = document.querySelectorAll('input, select, textarea');
-        
-        formElements.forEach(element => {
-          // Listen for input changes
-          element.addEventListener('input', () => this.autoSave());
-          element.addEventListener('change', () => this.autoSave());
+        // Reset form elements
+        this.formElements.forEach((config, elementId) => {
+          const { element, type } = config;
           
-          // For checkboxes and radio buttons, also listen for click
-          if (element.type === 'checkbox' || element.type === 'radio') {
-            element.addEventListener('click', () => this.autoSave());
+          if (type === 'text' || type === 'password' || type === 'number') {
+            element.value = '';
+          } else if (type === 'checkbox') {
+            element.checked = false;
+          } else if (type === 'select') {
+            element.selectedIndex = 0;
           }
         });
         
-        // Special handling for file inputs
-        const fileInputs = document.querySelectorAll('input[type="file"]');
-        fileInputs.forEach(fileInput => {
-          fileInput.addEventListener('change', () => this.autoSave());
-        });
-      }
-      
-      // Clear all saved form state
-      clearFormState() {
-        localStorage.removeItem(this.storageKey);
-        console.log('Settings form state cleared');
+        // Clear file input and display
+        const fileInput = document.getElementById('settingsDefaultFile');
+        if (fileInput) {
+          fileInput.value = '';
+        }
+        
+        const settingsSelectedFileNameDisplay = document.getElementById('settingsSelectedFileNameDisplay');
+        if (settingsSelectedFileNameDisplay) {
+          settingsSelectedFileNameDisplay.style.display = 'none';
+        }
+        
+        const defaultFileName = document.getElementById('defaultFileName');
+        if (defaultFileName) {
+          defaultFileName.textContent = '';
+        }
+        
+        // Reset credential validation status
+        window.credentialsValidated = false;
+        const statusSpan = document.getElementById('settingsCredentialsStatus');
+        if (statusSpan) {
+          statusSpan.textContent = 'Credentials not validated';
+          statusSpan.style.color = '#6b7280';
+        }
+        
+        console.log('All settings cleared successfully');
       }
     }
-    
-    // Initialize settings form persistence
-    const settingsFormPersistence = new SettingsFormPersistence();
+
+    // Create global instance
+    let settingsFormPersistence;
     
     // Prefill settings from localStorage and handle new credential UI logic
     window.addEventListener('DOMContentLoaded', function () {
-      // Initialize form persistence first
-      settingsFormPersistence.setupEventListeners();
-      
-      // Restore all form state from localStorage
-      settingsFormPersistence.restoreFormState();
+      // Initialize the comprehensive form persistence system
+      settingsFormPersistence = new SettingsFormPersistence();
       
       console.log('Settings page loaded. Checking for default file in localStorage...');
       const savedDefaultFileForDebugging = localStorage.getItem('default_csv_file');
       console.log('Value of "default_csv_file" in localStorage:', savedDefaultFileForDebugging);
       
-      // Legacy credential restoration (for backward compatibility)
-      const envIdInput = document.getElementById('settingsEnvId');
-      const clientIdInput = document.getElementById('settingsClientId');
-      const clientSecretInput = document.getElementById('settingsClientSecret');
-      const rememberSecretCheckbox = document.getElementById('settingsRememberClientSecret');
-      const saveAllCredentialsCheckbox = document.getElementById('settingsSaveAllCredentials');
-      const savedEnvId = localStorage.getItem('pingone_env_id');
-      const savedClientId = localStorage.getItem('pingone_client_id');
-      const savedClientSecret = localStorage.getItem('pingone_client_secret');
-      const rememberSecret = localStorage.getItem('pingone_remember_client_secret') === 'true';
-      const saveAllCredentials = localStorage.getItem('pingone_save_all_credentials') === 'true';
-      const language = localStorage.getItem('settings_language') || 'en';
-      const pageSize = localStorage.getItem('results_page_size') || '10';
-      
-      if (envIdInput && savedEnvId) envIdInput.value = savedEnvId;
-      if (clientIdInput && savedClientId) clientIdInput.value = savedClientId;
-      if (rememberSecretCheckbox) rememberSecretCheckbox.checked = rememberSecret;
-      if (saveAllCredentialsCheckbox) saveAllCredentialsCheckbox.checked = saveAllCredentials;
-      if (clientSecretInput) {
-        if (rememberSecret && savedClientSecret) {
-          clientSecretInput.value = savedClientSecret;
-        } else {
-          clientSecretInput.value = '';
-        }
-      }
-      document.getElementById('settingsLanguage').value = language;
-      document.getElementById('settingsResultsPageSize').value = pageSize;
-      
       // Add clear button handlers
       const clearEnvBtn = document.getElementById('clearSettingsEnvIdBtn');
-      if (clearEnvBtn && envIdInput) clearEnvBtn.onclick = function () { envIdInput.value = ''; localStorage.removeItem('pingone_env_id'); };
-      const clearClientIdBtn = document.getElementById('clearSettingsClientIdBtn');
-      if (clearClientIdBtn && clientIdInput) clearClientIdBtn.onclick = function () { clientIdInput.value = ''; localStorage.removeItem('pingone_client_id'); };
-      const clearClientSecretBtn = document.getElementById('clearSettingsClientSecretBtn');
-      if (clearClientSecretBtn && clientSecretInput) clearClientSecretBtn.onclick = function () { clientSecretInput.value = ''; localStorage.removeItem('pingone_client_secret'); };
+      if (clearEnvBtn) {
+        clearEnvBtn.onclick = function () { 
+          document.getElementById('settingsEnvId').value = ''; 
+          localStorage.removeItem('pingone_env_id'); 
+        };
+      }
       
-      // Set up event listeners for credential checkboxes
+      const clearClientIdBtn = document.getElementById('clearSettingsClientIdBtn');
+      if (clearClientIdBtn) {
+        clearClientIdBtn.onclick = function () { 
+          document.getElementById('settingsClientId').value = ''; 
+          localStorage.removeItem('pingone_client_id'); 
+        };
+      }
+      
+      const clearClientSecretBtn = document.getElementById('clearSettingsClientSecretBtn');
+      if (clearClientSecretBtn) {
+        clearClientSecretBtn.onclick = function () { 
+          document.getElementById('settingsClientSecret').value = ''; 
+          localStorage.removeItem('pingone_client_secret'); 
+        };
+      }
+      
+      // Restore all form state from localStorage
+      settingsFormPersistence.restoreFormState();
+      
+      // Add event listeners for credential checkboxes
       if (rememberSecretCheckbox) {
         rememberSecretCheckbox.addEventListener('change', function () {
           localStorage.setItem('pingone_remember_client_secret', rememberSecretCheckbox.checked ? 'true' : 'false');
@@ -2087,9 +2075,11 @@
 
     function actuallyClearAllSettings() {
       // Clear comprehensive form persistence state
-      settingsFormPersistence.clearFormState();
+      if (settingsFormPersistence) {
+        settingsFormPersistence.clearAllSettings();
+      }
       
-      // Clear legacy localStorage items
+      // Clear legacy localStorage items for backward compatibility
       localStorage.removeItem('pingone_env_id');
       localStorage.removeItem('pingone_client_id');
       localStorage.removeItem('pingone_client_secret');
@@ -2100,6 +2090,8 @@
       localStorage.removeItem('modify_attributes');
       localStorage.removeItem('settings_api_base_url');
       localStorage.removeItem('default_csv_file');
+      localStorage.removeItem('saved_csv_file_name');
+      sessionStorage.removeItem('temp_csv_file_name');
       
       // Clear form fields
       document.getElementById('settingsEnvId').value = ''; 
@@ -2116,11 +2108,21 @@
       // Clear checkboxes
       document.querySelectorAll('.red-checkbox').forEach(cb => {
         cb.checked = false;
-        cb.addEventListener('change', function() {
-          const checked = Array.from(document.querySelectorAll('.red-checkbox')).filter(c => c.checked).map(c => c.id);
-          localStorage.setItem('modify_attributes', JSON.stringify(checked));
-        });
       });
+      
+      // Clear file display
+      const settingsSelectedFileNameDisplay = document.getElementById('settingsSelectedFileNameDisplay');
+      if (settingsSelectedFileNameDisplay) {
+        settingsSelectedFileNameDisplay.style.display = 'none';
+      }
+      
+      // Reset credential validation status
+      window.credentialsValidated = false;
+      const statusSpan = document.getElementById('settingsCredentialsStatus');
+      if (statusSpan) {
+        statusSpan.textContent = 'Credentials not validated';
+        statusSpan.style.color = '#6b7280';
+      }
       
       console.log('All settings and form state cleared successfully');
     }
@@ -2397,6 +2399,15 @@
     window.addEventListener('storage', function(e) {
       if (e.key === 'saved_csv_file_name' || e.key === 'temp_csv_file_name') {
         restoreFileName();
+      }
+    });
+
+    // Listen for storage events to sync form state across tabs/windows
+    window.addEventListener('storage', function(e) {
+      if (e.key && e.key.startsWith('pingone_')) {
+        if (settingsFormPersistence) {
+          settingsFormPersistence.restoreFormState();
+        }
       }
     });
   </script>
