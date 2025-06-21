@@ -1563,7 +1563,7 @@
         }
       } catch (error) {
         window.credentialsValidated = false;
-        statusSpan.textContent = `❌ ${error.message}`;
+        statusSpan.textContent = '❌ Invalid credentials. Please check your Environment ID, Client ID, and Client Secret';
         statusSpan.style.color = '#dc2626';
         testBtn.textContent = 'Test Credentials';
         testBtn.disabled = false;
