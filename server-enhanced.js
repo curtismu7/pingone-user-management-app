@@ -86,9 +86,6 @@ const upload = multer({
   }
 });
 
-// Serve static files from the current directory
-app.use(express.static(__dirname));
-
 // Serve index.html for the root route
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
@@ -678,6 +675,9 @@ async function deleteUser(userId, environmentId, accessToken) {
     timeout: 30000
   });
 }
+
+// Serve static files from the current directory (moved after API routes)
+app.use(express.static(__dirname));
 
 // Error handling middleware (must be last)
 app.use(errorHandler);
