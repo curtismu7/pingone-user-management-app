@@ -760,15 +760,45 @@
     }
     .file-input-container {
       display: flex;
-      align-items: center;
-      gap: 0.5em;
-      margin-top: 0.5em;
-      cursor: pointer;
-      width: 100%;
-      max-width: 350px;
+      flex-direction: column;
+      gap: 0.5rem;
     }
     
-    .file-input-container input[type="file"] {
+    .settings-file-checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .settings-file-checkbox-label {
+      font-size: 0.95rem;
+      color: #374151;
+      cursor: pointer;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    #clearDefaultFileBtn {
+      background: #e5e7eb;
+      color: #0033a0;
+      border: none;
+      border-radius: 6px;
+      padding: 0.5rem 0.9rem;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background 0.2s;
+      height: fit-content;
+      white-space: nowrap;
+    }
+    
+    #clearDefaultFileBtn:hover {
+      background: #d1d5db;
+    }
+    
+    #settingsDefaultFile {
+      width: 100%;
       height: 2.5rem;
       font-size: 1rem;
       padding: 0.5rem 0.8rem;
@@ -776,18 +806,17 @@
       border: 1px solid #cbd5e1;
       background: #f3f4f6;
       box-sizing: border-box;
-      width: 100%;
       color: #e60028;
       cursor: pointer;
       transition: border-color 0.2s, background-color 0.2s;
     }
     
-    .file-input-container input[type="file"]:hover {
+    #settingsDefaultFile:hover {
       border-color: #e60028;
       background: #f8fafc;
     }
     
-    .file-input-container input[type="file"]:focus {
+    #settingsDefaultFile:focus {
       outline: none;
       border-color: #e60028;
       box-shadow: 0 0 0 2px rgba(230, 0, 40, 0.1);
@@ -1062,6 +1091,32 @@
     .tippy-box[data-theme~='pingone'][data-placement^='right'] > .tippy-arrow::before {
       border-right-color: #f2f2f2;
     }
+    
+    .settings-subsection {
+      background: #f8fafc;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.2rem;
+      width: 100%;
+      max-width: 900px;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    
+    .settings-subsection-title {
+      display: flex;
+      align-items: center;
+      gap: 0.3em;
+      margin-bottom: 0.5rem;
+      font-size: 1.05rem;
+      font-weight: 500;
+      color: #374151;
+    }
   </style>
   <!-- Add tippy.js CDN -->
   <link rel="stylesheet" href="https://unpkg.com/tippy.js@6/dist/tippy.css" />
@@ -1198,42 +1253,39 @@
         </div>
         <div class="settings-section">
           <div style="font-size:1.45rem;font-weight:700;color:#0033a0;margin-bottom:1.1rem;">Default CSV File</div>
-          <div style="background:#f8fafc;border:1.5px solid #cbd5e1;border-radius:12px;padding:1.5rem;margin-bottom:1.2rem;width:100%;max-width:900px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;margin-left:auto;margin-right:auto;">
+          <div class="settings-subsection">
             <div style="display:flex;flex-direction:column;align-items:center;gap:1rem;width:100%;max-width:600px;">
-              <div style="display:flex;align-items:center;gap:0.3em;margin-bottom:0.5rem;">
-                <span style="font-size:1.05rem;font-weight:500;color:#374151;">Default CSV File</span>
+              <div class="settings-subsection-title">
+                <span>Default CSV File</span>
                 <span class="info-icon" data-tippy-content="Set a default CSV file that will be automatically selected on the main page. This choice will be kept until changed here or in Main import page."></span>
               </div>
-              <div style="display:flex;align-items:center;gap:1rem;width:100%;">
-                <div class="file-input-container" style="flex:1;">
-                  <input type="file" id="settingsDefaultFile" accept=".csv" class="enhanced-input" data-tippy-content="Select a default CSV file that will be automatically loaded on the main page" style="width:100%;height:2.5rem;font-size:1rem;padding:0.5rem 0.8rem;border-radius:6px;border:1px solid #cbd5e1;background:#f3f4f6;box-sizing:border-box;" />
-                  <div class="settings-file-checkbox-row" style="display:flex;align-items:center;margin-top:0.5rem;justify-content:flex-start;">
+              <div style="display:grid;grid-template-columns:1fr auto;align-items:start;gap:1rem;width:100%;">
+                <div class="file-input-container">
+                  <input type="file" id="settingsDefaultFile" accept=".csv" class="enhanced-input" data-tippy-content="Select a default CSV file that will be automatically loaded on the main page" />
+                  <div class="settings-file-checkbox-row">
                     <input type="checkbox" id="saveFileNameCheckbox" class="unified-checkbox enhanced-input" data-tippy-content="Save the selected file name to browser storage for future sessions" />
-                    <label for="saveFileNameCheckbox" class="settings-file-checkbox-label" style="font-size:0.95rem;color:#374151;cursor:pointer;user-select:none;">
+                    <label for="saveFileNameCheckbox" class="settings-file-checkbox-label">
                       Save file name
                       <span class="info-icon" data-tippy-content="Stores the selected file name across sessions and between pages"></span>
                     </label>
                   </div>
-                  <!-- File name display area for settings -->
-                  <div id="settingsSelectedFileNameDisplay" style="
-                    margin-top: 0.5rem;
-                    padding: 0.5rem;
-                    background: #f3f4f6;
-                    border: 1px solid #d1d5db;
-                    border-radius: 6px;
-                    font-size: 0.9rem;
-                    color: #374151;
-                    display: none;
-                    text-align: center;
-                  ">
-                    <span id="settingsSelectedFileNameText"></span>
-                  </div>
                 </div>
-                <button type="button" id="clearDefaultFileBtn" class="button-tooltip" data-tippy-content="Clear the default file selection" style="background:#e5e7eb;color:#0033a0;border:none;border-radius:6px;padding:0.5rem 0.9rem;font-size:1.1rem;cursor:pointer;transition:background 0.2s;height:fit-content;white-space:nowrap;">Clear</button>
+                <button type="button" id="clearDefaultFileBtn" class="button-tooltip" data-tippy-content="Clear the default file selection">Clear</button>
               </div>
-              <div id="defaultFileInfo" style="font-size:0.95rem;color:#6b7280;text-align:center;margin-top:0.5rem;display:none;">
-                <span id="defaultFileName"></span>
-                <span id="defaultFileSize"></span>
+              <!-- File name display area for settings -->
+              <div id="settingsSelectedFileNameDisplay" style="
+                width: 100%;
+                margin-top: 0.5rem;
+                padding: 0.5rem;
+                background: #f3f4f6;
+                border: 1px solid #d1d5db;
+                border-radius: 6px;
+                font-size: 0.9rem;
+                color: #374151;
+                display: none;
+                text-align: center;
+              ">
+                <span id="settingsSelectedFileNameText"></span>
               </div>
             </div>
           </div>
