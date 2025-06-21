@@ -170,11 +170,32 @@ const securityHeaders = helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://assets.pingone.com"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "https://unpkg.com", "https://cdnjs.cloudflare.com"],
-      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      styleSrc: [
+        "'self'", 
+        "'unsafe-inline'", 
+        "https://fonts.googleapis.com", 
+        "https://assets.pingone.com",
+        "https://unpkg.com",
+        "https://use.typekit.net"
+      ],
+      scriptSrc: [
+        "'self'", 
+        "'unsafe-inline'", 
+        "https://unpkg.com", 
+        "https://cdnjs.cloudflare.com"
+      ],
+      fontSrc: [
+        "'self'", 
+        "https://fonts.gstatic.com",
+        "https://assets.pingone.com",
+        "data:"
+      ],
       imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'", "https://auth.pingone.com", "https://api.pingone.com"]
+      connectSrc: [
+        "'self'", 
+        "https://auth.pingone.com", 
+        "https://api.pingone.com"
+      ]
     }
   },
   hsts: {
