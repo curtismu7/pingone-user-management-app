@@ -7,6 +7,10 @@
   <link rel="shortcut icon" href="favicon.ico">
   <link id="ui-library-css" rel="stylesheet" type="text/css" href="https://assets.pingone.com/ux/ui-library/4.40.1/css/ui-library.css">
   <link href="https://fonts.googleapis.com/css?family=Inter:400,500,700&display=swap" rel="stylesheet">
+  <!-- Add tippy.js CDN -->
+  <link rel="stylesheet" href="https://unpkg.com/tippy.js@6/dist/tippy.css" />
+  <script src="https://unpkg.com/@popperjs/core@2"></script>
+  <script src="https://unpkg.com/tippy.js@6"></script>
   <style>
     body {
       background: #f4f6fb;
@@ -869,6 +873,33 @@
         opacity: 1;
       }
     }
+
+    /* Custom tippy.js theme for PingOne */
+    .tippy-box[data-theme~='pingone'] {
+      background-color: #f2f2f2;
+      color: #22223b;
+      min-width: 140px;
+      max-width: 260px;
+      padding: 8px 12px;
+      font-size: 14px;
+      line-height: 1.6;
+      border-radius: 8px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.10);
+      border: 1px solid #e5e7eb;
+      text-align: left;
+    }
+    .tippy-box[data-theme~='pingone'][data-placement^='top'] > .tippy-arrow::before {
+      border-top-color: #f2f2f2;
+    }
+    .tippy-box[data-theme~='pingone'][data-placement^='bottom'] > .tippy-arrow::before {
+      border-bottom-color: #f2f2f2;
+    }
+    .tippy-box[data-theme~='pingone'][data-placement^='left'] > .tippy-arrow::before {
+      border-left-color: #f2f2f2;
+    }
+    .tippy-box[data-theme~='pingone'][data-placement^='right'] > .tippy-arrow::before {
+      border-right-color: #f2f2f2;
+    }
   </style>
 </head>
 
@@ -966,10 +997,7 @@
         <div class="credential-row">
           <label for="envIdInput" class="credential-label">
             Environment ID
-            <span class="custom-tooltip" data-tooltip="Enter your PingOne Environment ID UUID">
-              <span class="tooltip-icon">i</span>
-              <span class="tooltip-content">Enter your PingOne Environment ID UUID</span>
-            </span>
+            <span class="info-icon" data-tippy-content="Enter your PingOne Environment ID UUID"></span>
           </label>
           <input type="text" id="envIdInput" placeholder="Enter Environment ID" class="credential-input enhanced-input" data-tooltip="Your PingOne Environment ID (e.g. 7853c888-ad7d-470c-add6-597397698767)" />
           <button id="clearEnvIdBtn" type="button" class="clear-btn button-tooltip" data-tooltip="Clear the Environment ID field">&times;</button>
@@ -977,10 +1005,7 @@
         <div class="credential-row">
           <label for="clientIdInput" class="credential-label">
             Client ID
-            <span class="custom-tooltip" data-tooltip="Enter your PingOne Worker App Client ID">
-              <span class="tooltip-icon">i</span>
-              <span class="tooltip-content">Enter your PingOne Worker App Client ID</span>
-            </span>
+            <span class="info-icon" data-tippy-content="Enter your PingOne Worker App Client ID"></span>
           </label>
           <input type="text" id="clientIdInput" placeholder="Enter Client ID" class="credential-input enhanced-input" data-tooltip="Your PingOne Client ID from the worker application" />
           <button id="clearClientIdBtn" type="button" class="clear-btn button-tooltip" data-tooltip="Clear the Client ID field">&times;</button>
@@ -988,10 +1013,7 @@
         <div class="credential-row">
           <label for="clientSecretInput" class="credential-label">
             Client Secret
-            <span class="custom-tooltip" data-tooltip="Enter your PingOne Worker App Client Secret">
-              <span class="tooltip-icon">i</span>
-              <span class="tooltip-content">Enter your PingOne Worker App Client Secret</span>
-            </span>
+            <span class="info-icon" data-tippy-content="Enter your PingOne Worker App Client Secret"></span>
           </label>
           <div style="position:relative;width:100%;max-width:350px;grid-column:2;">
             <input type="password" id="clientSecretInput" placeholder="Enter Client Secret" class="credential-input enhanced-input" style="padding-right:2.5rem;" data-tooltip="Your PingOne Client Secret from the worker application" />
@@ -1861,17 +1883,6 @@
           </div>
           <div class="action-status-progress">Processing ${total} items…</div>
           <div class="action-status-row" id="actionStatusSpinnerRow">
-            <div class="action-status-spinner" style="
-              border: 4px solid #e5e7eb;
-              border-top: 4px solid #e60028;
-              border-radius: 50%;
-              width: 28px;
-              height: 28px;
-              animation: spin 1s linear infinite;
-              margin-right: 0.7rem;
-              display: inline-block;
-              vertical-align: middle;
-            "></div>
             <span id="actionStatusCounter" style="
               color: #0033a0;
               font-weight: 500;
@@ -2036,7 +2047,27 @@
       }
     }
     
-    // Function to upload CSV and import users
+    // Helper function to show dynamic action summary
+    function showActionSummary(action, successCount, skippedCount = 0, errorCount = 0) {
+      const statusSpan = document.getElementById('credentialsStatus');
+      
+      if (errorCount > 0) {
+        // Red version for errors/partial success
+        statusSpan.textContent = `❌ ${successCount} items ${action.toLowerCase()}, ${skippedCount} skipped, ${errorCount} errors.`;
+        statusSpan.style.color = '#dc2626';
+      } else {
+        // Green version for success
+        let message = `✅ ${successCount} items ${action.toLowerCase()}`;
+        if (skippedCount > 0) {
+          message += `, ${skippedCount} skipped`;
+        }
+        message += '.';
+        statusSpan.textContent = message;
+        statusSpan.style.color = '#16a34a';
+      }
+    }
+
+    // Function to upload CSV file
     async function uploadCSV() {
       const csvFileInput = document.getElementById('csvFile');
       const importBtn = document.getElementById('importUsersBtn');
@@ -2133,6 +2164,24 @@
                   // This is the final report array
                   console.log('Import completed:', data);
                   finalProcessedCount = data.length; // Use array length as final count
+                  
+                  // Parse the final report to get counts
+                  let successCount = 0;
+                  let skippedCount = 0;
+                  let errorCount = 0;
+                  
+                  data.forEach(item => {
+                    if (item.status === 'created' || item.status === 'imported') {
+                      successCount++;
+                    } else if (item.status === 'skipped') {
+                      skippedCount++;
+                    } else if (item.status === 'error') {
+                      errorCount++;
+                    }
+                  });
+                  
+                  // Show dynamic summary
+                  showActionSummary('Imported', successCount, skippedCount, errorCount);
                 }
               } catch (parseError) {
                 console.warn('Failed to parse response line:', line);
@@ -2163,10 +2212,7 @@
         actionStatus.updateProgress(finalProcessedCount, totalItems);
         actionStatus.showSuccess();
         
-        // Show final status message with actual processed count
-        const processedCount = finalProcessedCount > 0 ? finalProcessedCount : totalItems;
-        statusSpan.textContent = `✅ User import completed successfully! Processed ${processedCount} items from your CSV file and added them to your PingOne environment.`;
-        statusSpan.style.color = '#16a34a';
+        // Note: Status message is now handled by showActionSummary() called in the final report handler
       } catch (error) {
         console.error('Import error:', error);
         actionStatus.showError([`Import failed: ${error.message}`]);
@@ -2289,6 +2335,24 @@
                   // This is the final report array
                   console.log('Delete completed:', data);
                   finalDeletedCount = data.length; // Use array length as final count
+                  
+                  // Parse the final report to get counts
+                  let successCount = 0;
+                  let skippedCount = 0;
+                  let errorCount = 0;
+                  
+                  data.forEach(item => {
+                    if (item.status === 'deleted') {
+                      successCount++;
+                    } else if (item.status === 'not_found') {
+                      skippedCount++;
+                    } else if (item.status === 'error') {
+                      errorCount++;
+                    }
+                  });
+                  
+                  // Show dynamic summary
+                  showActionSummary('Deleted', successCount, skippedCount, errorCount);
                 }
               } catch (parseError) {
                 console.warn('Failed to parse response line:', line);
@@ -2319,10 +2383,7 @@
         actionStatus.updateProgress(finalDeletedCount, totalItems);
         actionStatus.showSuccess();
         
-        // Show final status message with actual deleted count
-        const deletedCount = finalDeletedCount > 0 ? finalDeletedCount : totalItems;
-        statusSpan.textContent = `✅ User deletion completed! Deleted ${deletedCount} users from your PingOne environment.`;
-        statusSpan.style.color = '#16a34a';
+        // Note: Status message is now handled by showActionSummary() called in the final report handler
       } catch (error) {
         console.error('Delete error:', error);
         actionStatus.showError([`Delete failed: ${error.message}`]);
@@ -2432,6 +2493,24 @@
                   // This is the final report array
                   console.log('Modify completed:', data);
                   finalProcessedCount = data.length; // Use array length as final count
+                  
+                  // Parse the final report to get counts
+                  let successCount = 0;
+                  let skippedCount = 0;
+                  let errorCount = 0;
+                  
+                  data.forEach(item => {
+                    if (item.status === 'modified') {
+                      successCount++;
+                    } else if (item.status === 'skipped') {
+                      skippedCount++;
+                    } else if (item.status === 'error') {
+                      errorCount++;
+                    }
+                  });
+                  
+                  // Show dynamic summary
+                  showActionSummary('Modified', successCount, skippedCount, errorCount);
                 }
               } catch (parseError) {
                 console.warn('Failed to parse response line:', line);
@@ -2631,6 +2710,7 @@
       const saveFileNameCheckbox = document.getElementById('saveFileNameCheckbox');
       const selectedFileNameDisplay = document.getElementById('selectedFileNameDisplay');
       const selectedFileNameText = document.getElementById('selectedFileNameText');
+      const headerFileName = document.getElementById('headerFileName');
       
       if (csvFileInput.files && csvFileInput.files.length > 0) {
         const fileName = csvFileInput.files[0].name;
@@ -2638,6 +2718,11 @@
         // Display the file name
         selectedFileNameText.textContent = `Selected: ${fileName}`;
         selectedFileNameDisplay.style.display = 'block';
+        
+        // Update the header text with the actual file name
+        if (headerFileName) {
+          headerFileName.textContent = fileName;
+        }
         
         // Save based on checkbox state
         if (saveFileNameCheckbox && saveFileNameCheckbox.checked) {
@@ -2654,6 +2739,11 @@
         selectedFileNameDisplay.style.display = 'none';
         localStorage.removeItem('saved_csv_file_name');
         sessionStorage.removeItem('temp_csv_file_name');
+        
+        // Reset the header text to default
+        if (headerFileName) {
+          headerFileName.textContent = 'file with users and extension of .csv file';
+        }
       }
     }
     
@@ -2680,6 +2770,7 @@
       const selectedFileNameDisplay = document.getElementById('selectedFileNameDisplay');
       const selectedFileNameText = document.getElementById('selectedFileNameText');
       const saveFileNameCheckbox = document.getElementById('saveFileNameCheckbox');
+      const headerFileName = document.getElementById('headerFileName');
       
       // First check localStorage for persistent file name
       let fileName = localStorage.getItem('saved_csv_file_name');
@@ -2687,6 +2778,11 @@
         selectedFileNameText.textContent = `Selected: ${fileName}`;
         selectedFileNameDisplay.style.display = 'block';
         if (saveFileNameCheckbox) saveFileNameCheckbox.checked = true;
+        
+        // Update the header text with the saved file name
+        if (headerFileName) {
+          headerFileName.textContent = fileName;
+        }
         return;
       }
       
@@ -2696,11 +2792,21 @@
         selectedFileNameText.textContent = `Selected: ${fileName}`;
         selectedFileNameDisplay.style.display = 'block';
         if (saveFileNameCheckbox) saveFileNameCheckbox.checked = false;
+        
+        // Update the header text with the temporary file name
+        if (headerFileName) {
+          headerFileName.textContent = fileName;
+        }
         return;
       }
       
       // No saved file name
       selectedFileNameDisplay.style.display = 'none';
+      
+      // Reset the header text to default
+      if (headerFileName) {
+        headerFileName.textContent = 'file with users and extension of .csv file';
+      }
     }
 
     // Function to sync file names when navigating between pages
@@ -3256,6 +3362,25 @@
         showCredentialErrorModal('Credential validation failed', 'No detailed error information available.');
       }
     }
+
+    // Initialize tippy.js on all elements with data-tippy-content
+    document.addEventListener('DOMContentLoaded', function() {
+      tippy('[data-tippy-content]', {
+        theme: 'pingone',
+        placement: 'top',
+        arrow: true,
+        animation: 'shift-away',
+        duration: [200, 150],
+        delay: [0, 0],
+        interactive: false,
+        allowHTML: true,
+        maxWidth: 260,
+        offset: [0, 8],
+        // Keep tooltip on hover/tap, no timeout
+        trigger: 'mouseenter focus',
+        touch: ['hold', 500],
+      });
+    });
   </script>
 </body>
 </html>
