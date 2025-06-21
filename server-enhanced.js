@@ -212,61 +212,79 @@ app.post('/get-worker-token', authRateLimiter, validateInput, async (req, res) =
       hasClientSecret: !!clientSecret
     });
     
-    // Validate input
-    const validation = authService.validateAllCredentials(environmentId, clientId, clientSecret);
-    if (!validation.isValid) {
-      logStatus(`/get-worker-token | validation_error`);
-      console.log(`Validation errors:`, validation.errors);
-      writeRunFooter(startTime);
-      return res.status(400).json({ 
-        error: 'Invalid credentials format.',
-        details: validation.errors,
-        help: 'Please check that your Environment ID, Client ID, and Client Secret are correctly formatted.'
+    // Validate credentials with detailed error messages
+    const validationResult = authService.validateAllCredentials(environmentId, clientId, clientSecret);
+    if (!validationResult.isValid) {
+      logStatus(`/get-worker-token | validation failed: ${validationResult.errors.join(', ')}`);
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid credentials',
+        details: validationResult.errors,
+        timestamp: new Date().toISOString()
       });
     }
     
-    const token = await authService.getWorkerToken(environmentId, clientId, clientSecret);
-    logStatus(`/get-worker-token | success`);
-    writeRunFooter(startTime);
-    res.json({ access_token: token });
-  } catch (err) {
-    logStatus(`/get-worker-token | error`);
-    const timestamp = new Date().toISOString();
-    const errorMsg = err && err.stack ? err.stack : (err && err.message ? err.message : JSON.stringify(err));
-    const logEntry = `${timestamp} | Get Worker Token failed | ${errorMsg}`;
-    safeAppendLog(logEntry + '\n');
-    writeRunFooter(startTime);
+    logStatus(`/get-worker-token | validation passed`);
     
-    // Provide more helpful error messages
-    let statusCode = 500;
-    let errorResponse = { error: 'Internal server error' };
+    // Get worker token with retry logic
+    const tokenResult = await authService.getWorkerToken(environmentId, clientId, clientSecret);
     
-    if (err.message && err.message.includes('Invalid credentials')) {
-      statusCode = 401;
-      errorResponse = { 
-        error: 'Invalid credentials. Please check your Environment ID, Client ID, and Client Secret.',
-        help: 'Make sure all three fields are filled in correctly and try again.'
-      };
-    } else if (err.message && err.message.includes('Rate limit')) {
-      statusCode = 429;
-      errorResponse = { 
-        error: 'Rate limit exceeded. Please wait a moment and try again.',
-        help: 'Too many authentication attempts. Please wait 15 minutes before trying again.'
-      };
-    } else if (err.message && err.message.includes('Network error')) {
-      statusCode = 503;
-      errorResponse = { 
-        error: 'Network error. Please check your internet connection.',
-        help: 'Unable to connect to PingOne services. Please check your network connection.'
-      };
+    if (tokenResult.success) {
+      logStatus(`/get-worker-token | success`);
+      writeRunFooter(startTime);
+      res.json({
+        success: true,
+        accessToken: tokenResult.accessToken,
+        expiresIn: tokenResult.expiresIn,
+        timestamp: new Date().toISOString()
+      });
     } else {
-      errorResponse = { 
-        error: err.message || 'Authentication failed',
-        help: 'Please check your credentials and try again. If the problem persists, contact your administrator.'
-      };
+      logStatus(`/get-worker-token | failed: ${tokenResult.error}`);
+      writeRunFooter(startTime);
+      res.status(500).json({
+        success: false,
+        error: tokenResult.error,
+        timestamp: new Date().toISOString()
+      });
     }
+  } catch (error) {
+    logStatus(`/get-worker-token | error: ${error.message}`);
+    writeRunFooter(startTime);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      details: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Library event logging endpoint
+app.post('/log-library-event', (req, res) => {
+  try {
+    const { event, data, userAgent, url } = req.body;
     
-    res.status(statusCode).json(errorResponse);
+    const logEntry = {
+      timestamp: new Date().toISOString(),
+      event: event,
+      data: data,
+      userAgent: userAgent,
+      url: url,
+      ip: req.ip || req.connection.remoteAddress
+    };
+    
+    // Log to console with emoji for easy identification
+    const emoji = event === 'library_loaded' ? '📚' : '❌';
+    console.log(`${emoji} Library Event: ${data.library} | ${event} | ${data.source} | ${data.timestamp}`);
+    
+    // Append to library events log file
+    const logMessage = JSON.stringify(logEntry) + '\n';
+    fs.appendFileSync('library-events.log', logMessage);
+    
+    res.json({ success: true, message: 'Library event logged successfully' });
+  } catch (error) {
+    console.error('Error logging library event:', error);
+    res.status(500).json({ success: false, error: 'Failed to log library event' });
   }
 });
 
