@@ -1537,7 +1537,7 @@
           this.clearToken();
           this.updateCredentialStatus('❌ Invalid credentials. Please check Environment ID, Client ID, and Client Secret.', '#dc2626');
           
-          // Show credential error modal with detailed error information
+          // Store error details for modal display
           let errorDetails = '';
           if (error.message) {
             errorDetails = error.message;
@@ -1550,7 +1550,14 @@
             errorDetails = 'Unknown error occurred during credential validation';
           }
           
-          showCredentialErrorModal('Credential validation failed', errorDetails);
+          // Store error details globally for modal access
+          window.lastCredentialError = {
+            message: 'Credential validation failed',
+            details: errorDetails
+          };
+          
+          // Add clickable link for more information
+          this.updateCredentialStatus('❌ Invalid credentials. <a href="#" onclick="showCredentialErrorDetails()" style="color: #dc2626; text-decoration: underline;">Click here for more information</a>', '#dc2626');
           
           return false;
         } finally {
@@ -2952,16 +2959,6 @@
         }
         
         modal.style.display = 'block';
-        
-        // Reset troubleshooting section
-        const troubleshootingContent = document.getElementById('troubleshootingContent');
-        const troubleshootingIcon = document.getElementById('troubleshootingIcon');
-        if (troubleshootingContent) {
-          troubleshootingContent.style.display = 'none';
-        }
-        if (troubleshootingIcon) {
-          troubleshootingIcon.textContent = '▶';
-        }
       }
     }
     
@@ -2987,7 +2984,7 @@
       }
     }
     
-    // Add event handlers for credential error modal
+    // Add event listeners for modal
     document.addEventListener('DOMContentLoaded', function() {
       // Close button
       const closeBtn = document.getElementById('closeCredentialErrorModal');
@@ -2995,28 +2992,37 @@
         closeBtn.addEventListener('click', hideCredentialErrorModal);
       }
       
-      // Dismiss button
-      const dismissBtn = document.getElementById('dismissCredentialError');
-      if (dismissBtn) {
-        dismissBtn.addEventListener('click', hideCredentialErrorModal);
+      // OK button
+      const okBtn = document.getElementById('dismissCredentialError');
+      if (okBtn) {
+        okBtn.addEventListener('click', hideCredentialErrorModal);
       }
       
-      // Toggle troubleshooting button
-      const toggleBtn = document.getElementById('toggleTroubleshooting');
-      if (toggleBtn) {
-        toggleBtn.addEventListener('click', toggleTroubleshooting);
+      // More Info button
+      const moreInfoBtn = document.getElementById('toggleTroubleshooting');
+      if (moreInfoBtn) {
+        moreInfoBtn.addEventListener('click', toggleTroubleshooting);
       }
       
       // Close modal when clicking outside
       const modal = document.getElementById('credentialErrorModal');
       if (modal) {
-        modal.addEventListener('click', function(e) {
-          if (e.target === modal) {
+        modal.addEventListener('click', function(event) {
+          if (event.target === modal) {
             hideCredentialErrorModal();
           }
         });
       }
     });
+    
+    // Function to show credential error details modal
+    function showCredentialErrorDetails() {
+      if (window.lastCredentialError) {
+        showCredentialErrorModal(window.lastCredentialError.message, window.lastCredentialError.details);
+      } else {
+        showCredentialErrorModal('Credential validation failed', 'No detailed error information available.');
+      }
+    }
   </script>
 </body>
 </html>

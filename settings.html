@@ -1748,6 +1748,29 @@
         } catch (error) {
           this.clearToken();
           this.updateCredentialStatus('❌ Invalid credentials. Please check Environment ID, Client ID, and Client Secret.', '#dc2626');
+          
+          // Store error details for modal display
+          let errorDetails = '';
+          if (error.message) {
+            errorDetails = error.message;
+          } else if (error.response) {
+            errorDetails = `HTTP ${error.response.status}: ${error.response.statusText}`;
+            if (error.response.data && error.response.data.error) {
+              errorDetails += ` - ${error.response.data.error}`;
+            }
+          } else {
+            errorDetails = 'Unknown error occurred during credential validation';
+          }
+          
+          // Store error details globally for modal access
+          window.lastCredentialError = {
+            message: 'Credential validation failed',
+            details: errorDetails
+          };
+          
+          // Add clickable link for more information
+          this.updateCredentialStatus('❌ Invalid credentials. <a href="#" onclick="showCredentialErrorDetails()" style="color: #dc2626; text-decoration: underline;">Click here for more information</a>', '#dc2626');
+          
           return false;
         } finally {
           this.isValidating = false;
@@ -1758,7 +1781,7 @@
       updateCredentialStatus(message, color) {
         const statusSpan = document.getElementById('settingsCredentialsStatus');
         if (statusSpan) {
-          statusSpan.textContent = message;
+          statusSpan.innerHTML = message;
           statusSpan.style.color = color;
         }
       }
@@ -3433,5 +3456,89 @@
       </div>
     </div>
   </div>
+  
+  <script>
+    // Function to show credential error details modal
+    function showCredentialErrorDetails() {
+      if (window.lastCredentialError) {
+        showCredentialErrorModal(window.lastCredentialError.message, window.lastCredentialError.details);
+      } else {
+        showCredentialErrorModal('Credential validation failed', 'No detailed error information available.');
+      }
+    }
+    
+    // Credential Error Modal Functions
+    function showCredentialErrorModal(errorMessage = '', errorDetails = '') {
+      const modal = document.getElementById('credentialErrorModal');
+      const errorDetailsElement = document.getElementById('credentialErrorDetails');
+      
+      if (modal) {
+        // Set error details if provided
+        if (errorDetailsElement) {
+          if (errorDetails) {
+            errorDetailsElement.textContent = errorDetails;
+            errorDetailsElement.style.display = 'block';
+          } else {
+            errorDetailsElement.style.display = 'none';
+          }
+        }
+        
+        modal.style.display = 'block';
+      }
+    }
+    
+    function hideCredentialErrorModal() {
+      const modal = document.getElementById('credentialErrorModal');
+      if (modal) {
+        modal.style.display = 'none';
+      }
+    }
+    
+    function toggleTroubleshooting() {
+      const content = document.getElementById('troubleshootingContent');
+      const icon = document.getElementById('troubleshootingIcon');
+      
+      if (content && icon) {
+        if (content.style.display === 'none' || !content.style.display) {
+          content.style.display = 'block';
+          icon.textContent = '▼';
+        } else {
+          content.style.display = 'none';
+          icon.textContent = '▶';
+        }
+      }
+    }
+    
+    // Add event listeners for modal
+    document.addEventListener('DOMContentLoaded', function() {
+      // Close button
+      const closeBtn = document.getElementById('closeCredentialErrorModal');
+      if (closeBtn) {
+        closeBtn.addEventListener('click', hideCredentialErrorModal);
+      }
+      
+      // OK button
+      const okBtn = document.getElementById('dismissCredentialError');
+      if (okBtn) {
+        okBtn.addEventListener('click', hideCredentialErrorModal);
+      }
+      
+      // More Info button
+      const moreInfoBtn = document.getElementById('toggleTroubleshooting');
+      if (moreInfoBtn) {
+        moreInfoBtn.addEventListener('click', toggleTroubleshooting);
+      }
+      
+      // Close modal when clicking outside
+      const modal = document.getElementById('credentialErrorModal');
+      if (modal) {
+        modal.addEventListener('click', function(event) {
+          if (event.target === modal) {
+            hideCredentialErrorModal();
+          }
+        });
+      }
+    });
+  </script>
 </body>
 </html> 
