@@ -2354,7 +2354,10 @@
       validateCredentials();
       
       // Initialize custom file input for persistence
-      createCustomFileInput();
+      const customFileInput = createCustomFileInput();
+      if (!customFileInput) {
+        console.warn('Custom file input initialization failed, using standard file input');
+      }
       
       // Setup clear file button functionality
       const clearFileBtn = document.getElementById('clearFileBtn');
@@ -3584,8 +3587,21 @@
 
     // Function to create a custom file input that persists selection
     function createCustomFileInput() {
-      const csvFileInput = document.getElementById('csvFileInput');
+      const csvFileInput = document.getElementById('csvFile');
+      
+      // Check if the element exists
+      if (!csvFileInput) {
+        console.warn('CSV file input element not found');
+        return null;
+      }
+      
       const fileInputContainer = csvFileInput.parentElement;
+      
+      // Check if parent element exists
+      if (!fileInputContainer) {
+        console.warn('CSV file input parent element not found');
+        return null;
+      }
       
       // Create custom file input wrapper
       const customFileInput = document.createElement('div');
