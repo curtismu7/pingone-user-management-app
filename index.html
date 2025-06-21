@@ -379,452 +379,11 @@
   </div>
 
   <script>
-    // Unified Popup System
-    class UnifiedPopup {
-      constructor() {
-        this.popup = document.getElementById('unifiedPopup');
-        this.title = document.getElementById('popupTitle');
-        this.content = document.getElementById('popupContent');
-        this.buttons = document.getElementById('popupButtons');
-        this.closeBtn = document.getElementById('closeUnifiedPopup');
-        this.autoCloseTimer = null;
-        
-        this.setupEventListeners();
-      }
-      
-      setupEventListeners() {
-        // Close button
-        this.closeBtn.addEventListener('click', () => this.hide());
-        
-        // Close when clicking outside
-        this.popup.addEventListener('click', (event) => {
-          if (event.target === this.popup) {
-            this.hide();
-          }
-        });
-      }
-      
-      show(title, content, buttons = [], autoClose = true) {
-        this.title.textContent = title;
-        this.content.innerHTML = content;
-        
-        // Clear existing buttons
-        this.buttons.innerHTML = '';
-        
-        // Add buttons
-        buttons.forEach(button => {
-          const btn = document.createElement('button');
-          btn.textContent = button.text;
-          btn.style.cssText = `
-            background: ${button.primary ? '#e60028' : '#f8f9fa'};
-            color: ${button.primary ? 'white' : '#212529'};
-            border: 1px solid ${button.primary ? '#e60028' : '#000'};
-            border-radius: 8px;
-            padding: 0.75rem 1.5rem;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-            min-width: 80px;
-          `;
-          
-          btn.addEventListener('mouseover', () => {
-            btn.style.background = button.primary ? '#b91c1c' : '#e9ecef';
-          });
-          
-          btn.addEventListener('mouseout', () => {
-            btn.style.background = button.primary ? '#e60028' : '#f8f9fa';
-          });
-          
-          btn.addEventListener('click', () => {
-            if (button.onClick) {
-              button.onClick();
-            }
-            this.hide();
-          });
-          
-          this.buttons.appendChild(btn);
-        });
-        
-        // Show popup
-        this.popup.style.display = 'block';
-        
-        // Auto-close after 2 seconds if enabled
-        if (autoClose && buttons.length === 0) {
-          this.autoCloseTimer = setTimeout(() => this.hide(), 2000);
-        }
-      }
-      
-      hide() {
-        this.popup.style.display = 'none';
-        if (this.autoCloseTimer) {
-          clearTimeout(this.autoCloseTimer);
-          this.autoCloseTimer = null;
-        }
-      }
-      
-      // Convenience methods
-      alert(message, title = 'Information') {
-        this.show(title, message, [
-          { text: 'OK', primary: true }
-        ], true);
-      }
-      
-      confirm(message, title = 'Confirm', onConfirm, onCancel) {
-        this.show(title, message, [
-          { text: 'Cancel', primary: false, onClick: onCancel },
-          { text: 'Confirm', primary: true, onClick: onConfirm }
-        ], false);
-      }
-    }
-    
     // Initialize unified popup
     let unifiedPopup;
-    // DOMContentLoaded listener consolidated below
-    // document.addEventListener('DOMContentLoaded', () => {
-    //   unifiedPopup = new UnifiedPopup();
-    // });
-
-    // Comprehensive Token Management System
-    class TokenManager {
-      constructor() {
-        this.storagePrefix = 'pingone_token_';
-        this.tokenExpiryMinutes = 60; // Token expires after 60 minutes
-        this.validationExpiryMinutes = 30; // Re-validate every 30 minutes
-        this.currentToken = null;
-        this.tokenExpiry = null;
-        this.lastValidation = null;
-        this.isValidating = false;
-        this.init();
-      }
-      
-      init() {
-        this.loadStoredToken();
-        this.setupPeriodicValidation();
-      }
-      
-      // Load token from localStorage
-      loadStoredToken() {
-        try {
-          const storedToken = localStorage.getItem(this.storagePrefix + 'access_token');
-          const storedExpiry = localStorage.getItem(this.storagePrefix + 'expiry');
-          const storedValidation = localStorage.getItem(this.storagePrefix + 'last_validation');
-          
-          if (storedToken && storedExpiry && storedValidation) {
-            this.currentToken = storedToken;
-            this.tokenExpiry = new Date(storedExpiry);
-            this.lastValidation = new Date(storedValidation);
-            
-            // Check if token is still valid
-            if (this.isTokenValid()) {
-              window.credentialsValidated = true;
-              this.updateCredentialStatus('✅ Credentials validated', '#16a34a');
-              return true;
-            }
-          }
-        } catch (error) {
-          console.warn('Error loading stored token:', error);
-        }
-        
-        // Clear invalid token
-        this.clearToken();
-        return false;
-      }
-      
-      // Store token in localStorage
-      storeToken(token, expiryMinutes = this.tokenExpiryMinutes) {
-        try {
-          this.currentToken = token;
-          this.tokenExpiry = new Date(Date.now() + (expiryMinutes * 60 * 1000));
-          this.lastValidation = new Date();
-          
-          localStorage.setItem(this.storagePrefix + 'access_token', token);
-          localStorage.setItem(this.storagePrefix + 'expiry', this.tokenExpiry.toISOString());
-          localStorage.setItem(this.storagePrefix + 'last_validation', this.lastValidation.toISOString());
-          
-          window.credentialsValidated = true;
-          this.updateCredentialStatus('✅ Credentials validated', '#16a34a');
-          return true;
-        } catch (error) {
-          console.error('Error storing token:', error);
-          return false;
-        }
-      }
-      
-      // Clear stored token
-      clearToken() {
-        this.currentToken = null;
-        this.tokenExpiry = null;
-        this.lastValidation = null;
-        window.credentialsValidated = false;
-        
-        localStorage.removeItem(this.storagePrefix + 'access_token');
-        localStorage.removeItem(this.storagePrefix + 'expiry');
-        localStorage.removeItem(this.storagePrefix + 'last_validation');
-        
-        this.updateCredentialStatus('Credentials not validated', '#6b7280');
-      }
-      
-      // Check if token is valid and not expired
-      isTokenValid() {
-        if (!this.currentToken || !this.tokenExpiry) {
-          return false;
-        }
-        
-        const now = new Date();
-        return now < this.tokenExpiry;
-      }
-      
-      // Check if we need to re-validate (based on validation expiry)
-      needsRevalidation() {
-        if (!this.lastValidation) {
-          return true;
-        }
-        
-        const now = new Date();
-        const validationExpiry = new Date(this.lastValidation.getTime() + (this.validationExpiryMinutes * 60 * 1000));
-        return now > validationExpiry;
-      }
-      
-      // Get current token (with validation if needed)
-      async getValidToken() {
-        // If we have a valid token and don't need revalidation, return it
-        if (this.isTokenValid() && !this.needsRevalidation()) {
-          return this.currentToken;
-        }
-        
-        // If token is expired, clear it
-        if (!this.isTokenValid()) {
-          this.clearToken();
-        }
-        
-        // Try to re-validate silently
-        const success = await this.silentRevalidation();
-        if (success) {
-          return this.currentToken;
-        }
-        
-        return null;
-      }
-      
-      // Silent background revalidation
-      async silentRevalidation() {
-        if (this.isValidating) {
-          return false;
-        }
-        
-        this.isValidating = true;
-        
-        try {
-          const environmentId = localStorage.getItem('pingone_env_id');
-          const clientId = localStorage.getItem('pingone_client_id');
-          const clientSecret = localStorage.getItem('pingone_client_secret');
-          
-          if (!environmentId || !clientId || !clientSecret) {
-            return false;
-          }
-          
-          const response = await fetch('/get-worker-token', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              environmentId: environmentId,
-              clientId: clientId,
-              clientSecret: clientSecret
-            })
-          });
-          
-          if (response.ok) {
-            const result = await response.json();
-            if (result.access_token) {
-              this.storeToken(result.access_token);
-              return true;
-            }
-          }
-          
-          return false;
-        } catch (error) {
-          console.warn('Silent revalidation failed:', error);
-          return false;
-        } finally {
-          this.isValidating = false;
-        }
-      }
-      
-      // Force validation (for manual testing)
-      async forceValidation() {
-        const environmentId = document.getElementById('envIdInput')?.value;
-        const clientId = document.getElementById('clientIdInput')?.value;
-        const clientSecret = document.getElementById('clientSecretInput')?.value;
-        
-        if (!environmentId || !clientId || !clientSecret) {
-          this.updateCredentialStatus('❌ Please fill in all credential fields', '#dc2626');
-          return false;
-        }
-        
-        this.isValidating = true;
-        this.updateCredentialStatus('Testing credentials...', '#6b7280');
-        
-        try {
-          const response = await fetch('/get-worker-token', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              environmentId: environmentId,
-              clientId: clientId,
-              clientSecret: clientSecret
-            })
-          });
-          
-          if (response.ok) {
-            const result = await response.json();
-            if (result.access_token) {
-              this.storeToken(result.access_token);
-              
-              // Fetch environment details after successful token validation
-              await this.fetchEnvironmentDetails(environmentId, clientId, clientSecret);
-              
-              return true;
-            }
-          }
-          
-          const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-          throw new Error(errorData.error || 'Credential validation failed');
-        } catch (error) {
-          this.clearToken();
-          this.updateCredentialStatus('❌ Invalid credentials. Please check Environment ID, Client ID, and Client Secret.', '#dc2626');
-          
-          // Store error details for modal display
-          let errorDetails = '';
-          if (error.message) {
-            errorDetails = error.message;
-          } else if (error.response) {
-            errorDetails = `HTTP ${error.response.status}: ${error.response.statusText}`;
-            if (error.response.data && error.response.data.error) {
-              errorDetails += ` - ${error.response.data.error}`;
-            }
-          } else {
-            errorDetails = 'Unknown error occurred during credential validation';
-          }
-          
-          // Store error details globally for modal access
-          window.lastCredentialError = {
-            message: 'Credential validation failed',
-            details: errorDetails
-          };
-          
-          // Add clickable link for more information
-          this.updateCredentialStatus('❌ Invalid credentials. <a href="#" onclick="showCredentialErrorDetails()" style="color: #dc2626; text-decoration: underline;">Click here for more information</a>', '#dc2626');
-          
-          return false;
-        } finally {
-          this.isValidating = false;
-        }
-      }
-      
-      // Fetch environment details from PingOne API
-      async fetchEnvironmentDetails(environmentId, clientId, clientSecret) {
-        try {
-          const response = await fetch('/get-environment-details', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              environmentId: environmentId,
-              clientId: clientId,
-              clientSecret: clientSecret
-            })
-          });
-          
-          if (response.ok) {
-            const result = await response.json();
-            const environmentName = result.environment_name;
-            
-            // Store environment name in localStorage
-            localStorage.setItem('pingone_environment_name', environmentName);
-            
-            // Update the display
-            this.updateEnvironmentNameDisplay(environmentName);
-            
-            return environmentName;
-      } else {
-            // If environment details can't be fetched, fallback to showing just the Environment ID
-            console.warn('Failed to fetch environment details, falling back to Environment ID');
-            this.updateEnvironmentNameDisplay(null, environmentId);
-            return null;
-          }
-        } catch (error) {
-          console.error('Error fetching environment details:', error);
-          // Fallback to showing just the Environment ID
-          this.updateEnvironmentNameDisplay(null, environmentId);
-          return null;
-        }
-      }
-      
-      // Update environment name display
-      updateEnvironmentNameDisplay(environmentName, fallbackEnvironmentId = null) {
-        const environmentNameElement = document.getElementById('environmentNameDisplay');
-        if (environmentNameElement) {
-          if (environmentName) {
-            environmentNameElement.innerHTML = `<strong>Environment Name:</strong> <span style="color:#0033a0;">${environmentName}</span>`;
-            environmentNameElement.style.display = 'block';
-          } else if (fallbackEnvironmentId) {
-            environmentNameElement.innerHTML = `<strong>Environment ID:</strong> <span style="color:#0033a0;">${fallbackEnvironmentId}</span>`;
-            environmentNameElement.style.display = 'block';
-      } else {
-            environmentNameElement.style.display = 'none';
-          }
-        }
-      }
-      
-      // Update credential status display
-      updateCredentialStatus(message, color) {
-        const statusSpan = document.getElementById('credentialsStatus');
-        if (statusSpan) {
-          statusSpan.innerHTML = message;
-          statusSpan.style.color = color;
-        }
-      }
-      
-      // Setup periodic validation check
-      setupPeriodicValidation() {
-        // Check every 5 minutes
-        setInterval(() => {
-          if (this.isTokenValid() && this.needsRevalidation()) {
-            this.silentRevalidation();
-          }
-        }, 5 * 60 * 1000);
-      }
-      
-      // Validate credentials before action (used by Import/Delete/Modify)
-      async validateBeforeAction() {
-        const token = await this.getValidToken();
-        if (token) {
-          return true;
-        }
-        
-        // If silent validation failed, try one more time with current credentials
-        const success = await this.silentRevalidation();
-        if (success) {
-          return true;
-        }
-        
-        // If still failed, show error and require manual validation
-        this.updateCredentialStatus('❌ Credentials have expired. Please re-validate your credentials.', '#dc2626');
-        return false;
-      }
-    }
     
     // Global token manager instance
     let tokenManager;
-    
-    // Global variable to track credential validation status
-    window.credentialsValidated = false;
     
     // Global variable to track credential validation status
     window.credentialsValidated = false;
@@ -1002,7 +561,15 @@
         }
       } catch (error) {
         window.credentialsValidated = false;
-        statusSpan.textContent = '❌ Invalid credentials. Please check your Environment ID, Client ID, and Client Secret';
+        
+        // Check if this is a 429 error and handle it specially
+        if (is429Error(error)) {
+          handle429Error(error, 'Credential Test');
+          statusSpan.textContent = '⚠️ Rate limit exceeded. Please wait and try again.';
+        } else {
+          statusSpan.textContent = '❌ Invalid credentials. Please check your Environment ID, Client ID, and Client Secret';
+        }
+        
         statusSpan.style.color = '#dc2626';
         testBtn.textContent = 'Test Credentials';
         testBtn.disabled = false;
@@ -1010,714 +577,372 @@
         
         // Hide spinner
         hideSpinnerModal();
-        
-        // Show credential error modal with detailed error information
-        let errorDetails = '';
-        if (error.message) {
-          errorDetails = error.message;
-        } else if (error.response) {
-          errorDetails = `HTTP ${error.response.status}: ${error.response.statusText}`;
-          if (error.response.data && error.response.data.error) {
-            errorDetails += ` - ${error.response.data.error}`;
-          }
-        } else {
-          errorDetails = 'Unknown error occurred during credential validation';
-        }
-        
-        showCredentialErrorModal('Credential validation failed', errorDetails);
       }
     }
     
     // Function to load test credentials
     function loadTestCredentials() {
-      const envIdInput = document.getElementById('envIdInput');
-      const clientIdInput = document.getElementById('clientIdInput');
-      const clientSecretInput = document.getElementById('clientSecretInput');
-      
-      if (!envIdInput || !clientIdInput || !clientSecretInput) {
-        console.error('Credential input elements not found');
-        return;
-      }
-      
-      envIdInput.value = '7853c888-ad7d-470c-add6-597397698767';
-      clientIdInput.value = '83b39696-7c9d-4012-b9b2-8b4bfc9327ac';
-      clientSecretInput.value = '4xdT108XeW1c64I08sqQC2pJZA1-25kRsY1tRDXAnpGjAIztbtkPye_.9Xiqz6xf';
+      document.getElementById('envIdInput').value = '7853c888-ad7d-470c-add6-597397698767';
+      document.getElementById('clientIdInput').value = '83b39696-7c9d-4012-b9b2-8b4bfc9327ac';
+      document.getElementById('clientSecretInput').value = '4xdT108XeW1c64I08sqQC2pJZA1-25kRsY1tRDXAnpGjAIztbtkPye_.9Xiqz6xf';
       
       // Save to localStorage if saveAllCredentials is checked
       const saveAllBox = document.getElementById('saveAllCredentials');
       if (saveAllBox && saveAllBox.checked) {
-        localStorage.setItem('envId', envIdInput.value);
-        localStorage.setItem('clientId', clientIdInput.value);
-        localStorage.setItem('clientSecret', clientSecretInput.value);
+        localStorage.setItem('pingone_env_id', document.getElementById('envIdInput').value);
+        localStorage.setItem('pingone_client_id', document.getElementById('clientIdInput').value);
+        localStorage.setItem('pingone_client_secret', document.getElementById('clientSecretInput').value);
       }
     }
     
-    // Helper function to show dynamic action summary
-    function showActionSummary(action, successCount, skippedCount = 0, errorCount = 0) {
-      const statusSpan = document.getElementById('credentialsStatusText');
+    // Function to handle 429 (Too Many Requests) errors gracefully
+    function handle429Error(error, operation) {
+      console.error(`${operation} error (429):`, error);
       
-      if (!statusSpan) {
-        console.warn('credentialsStatusText element not found');
-        return;
+      // Show user-friendly message
+      const statusBox = document.getElementById('statusBox');
+      const rateLimitMessage = `
+        <div class="alert alert-warning">
+          <strong>Rate Limit Exceeded</strong><br>
+          PingOne API is temporarily limiting requests. This is normal for bulk operations.<br>
+          <strong>What to do:</strong>
+          <ul>
+            <li>Wait 30-60 seconds before trying again</li>
+            <li>Try with fewer users at once</li>
+            <li>Check your PingOne environment limits</li>
+          </ul>
+          <small>Technical details: ${error.message}</small>
+        </div>
+      `;
+      
+      if (statusBox) {
+        statusBox.innerHTML = rateLimitMessage;
       }
       
-      if (errorCount > 0) {
-        // Red version for errors/partial success
-        statusSpan.textContent = `❌ ${successCount} items ${action.toLowerCase()}, ${skippedCount} skipped, ${errorCount} errors.`;
-        statusSpan.style.color = '#dc2626';
-      } else {
-        // Green version for success
-        let message = `✅ ${successCount} items ${action.toLowerCase()}`;
-        if (skippedCount > 0) {
-          message += `, ${skippedCount} skipped`;
-        }
-        message += '.';
-        statusSpan.textContent = message;
-        statusSpan.style.color = '#16a34a';
-      }
-    }
-
-    // Function to upload CSV file
-    async function uploadCSV() {
-      const importBtn = document.getElementById('importUsersBtn');
-      const csvFileInput = document.getElementById('csvFile');
-      let statusSpan = document.getElementById('actionStatusText');
+      // Show rate limit warning banner
+      showRateLimitWarning();
       
-      // Add null checks for required elements
-      if (!importBtn) {
-        console.error('Import button not found');
-        return;
-      }
-      
-      if (!csvFileInput) {
-        console.error('CSV file input element not found');
-        if (typeof unifiedPopup !== 'undefined') {
-          unifiedPopup.alert('CSV file input not found. Please refresh the page.', 'System Error');
-        } else {
-          alert('CSV file input not found. Please refresh the page.');
-        }
-        return;
-      }
-      
-      // Fallback to credentialsStatusText if actionStatusText is not found
-      if (!statusSpan) {
-        statusSpan = document.getElementById('credentialsStatusText');
-      }
-      
-      // Check for valid credentials first
-      if (!await validateCredentials()) {
-        showCredentialErrorModal();
-        return;
-      }
-      
-      // Check if file input exists and has files
-      if (!csvFileInput) {
-        console.error('CSV file input element not found');
-        unifiedPopup.alert('CSV file input not found. Please refresh the page.', 'System Error');
-        return;
-      }
-      
-      if (!csvFileInput.files || csvFileInput.files.length === 0) {
-        unifiedPopup.alert('Please select a CSV file first.', 'No File Selected');
-        return;
-      }
-      
-      importBtn.disabled = true;
-      importBtn.textContent = 'Importing...';
-      
-      // Get stored credentials
-      const environmentId = localStorage.getItem('pingone_env_id');
-      const clientId = localStorage.getItem('pingone_client_id');
-      const clientSecret = localStorage.getItem('pingone_client_secret');
-      
-      const formData = new FormData();
-      formData.append('csv', csvFileInput.files[0]);
-      formData.append('environmentId', environmentId);
-      formData.append('clientId', clientId);
-      formData.append('clientSecret', clientSecret);
-      formData.append('mode', 'import');
-      
-      showSpinnerModal('Import', globalCSVRowCount);
-      
-      // Show worker token status at the start
-      showWorkerTokenStatus();
-      
-      // Use the global actionStatus instance
-      actionStatus.reset();
-      actionStatus.showProgress('Import', globalCSVRowCount);
-      
-      try {
-        const response = await fetch('/import-users', {
-          method: 'POST',
-          body: formData
-        });
-        
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-        
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = '';
-        let totalItems = globalCSVRowCount;
-        let currentProcessedCount = 0;
-        let finalProcessedCount = 0;
-        let batchCounter = 0;
-        let successCount = 0;
-        let errorCount = 0;
-        
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split('\n');
-          buffer = lines.pop() || '';
-          
-          for (const line of lines) {
-            if (line.trim()) {
-              try {
-                const data = JSON.parse(line);
-                
-                if (data.progress) {
-                  // Handle progress updates
-                  if (data.progress === 'started') {
-                    totalItems = data.total;
-                    currentProcessedCount = 0;
-                    // Update worker token status to success when operation starts
-                    updateWorkerTokenSuccess();
-                    updateSpinnerProgress(0, totalItems, 0, false, false);
-                  } else if (data.progress === 'processing') {
-                    currentProcessedCount = data.processed;
-                    batchCounter = data.batchCounter;
-                    successCount = data.success;
-                    errorCount = data.error;
-                    
-                    // Update spinner with batch counter (increments by 5)
-                    updateSpinnerProgress(currentProcessedCount, totalItems, batchCounter, false, false);
-                    actionStatus.updateProgress(currentProcessedCount, totalItems);
-                  } else if (data.progress === 'complete') {
-                    finalProcessedCount = data.total;
-                    successCount = data.success;
-                    errorCount = data.errors;
-                    batchCounter = data.batchCounter;
-                    
-                    // Show completion
-                    updateSpinnerProgress(finalProcessedCount, totalItems, batchCounter, false, true);
-                    actionStatus.updateProgress(finalProcessedCount, totalItems);
-                    actionStatus.showSuccess();
-                    
-                    // Show dynamic summary
-                    showActionSummary('Imported', successCount, 0, errorCount);
-                    
-                    // Update last action status
-                    updateLastActionStatus('import', successCount, 0);
-                  } else if (data.progress === 'cancelled') {
-                    finalProcessedCount = data.processed;
-                    successCount = data.success;
-                    errorCount = data.error;
-                    
-                    actionStatus.showError(['Operation was cancelled']);
-                    updateSpinnerProgress(finalProcessedCount, totalItems, batchCounter, false, true);
-                  }
-                } else if (data.error) {
-                  // Handle error response
-                  throw new Error(data.error);
-                }
-              } catch (parseError) {
-                console.warn('Failed to parse response line:', line);
-              }
-            }
-          }
-        }
-        
-        // Show final status message with actual processed count
-        const processedCount = finalProcessedCount > 0 ? finalProcessedCount : totalItems;
-        if (statusSpan) {
-          statusSpan.textContent = `✅ User import completed! Imported ${successCount} users into your PingOne environment.`;
-          statusSpan.style.color = '#16a34a';
-        }
-      } catch (error) {
-        console.error('Upload error:', error);
-        
-        // Check if this is a 429 error and handle it specially
-        if (is429Error(error)) {
-          handle429Error(error, 'Import');
-        } else {
-          // Update worker token status to error if it's a token-related error
-          if (error.message.includes('token') || error.message.includes('authentication') || error.message.includes('credentials')) {
-            updateWorkerTokenError();
-          }
-          actionStatus.showError([`Upload failed: ${error.message}`]);
-          if (statusSpan) {
-            statusSpan.textContent = `❌ Upload failed: ${error.message}. Please check your CSV file format and user data.`;
-            statusSpan.style.color = '#dc2626';
-          }
-        }
-      } finally {
-        importBtn.disabled = false;
-        importBtn.textContent = 'Import Users';
-        hideSpinnerModal();
-      }
-    }
-
-    // Function to delete users from CSV
-    async function deleteCSVUsers() {
-      const deleteBtn = document.getElementById('deleteUsersBtn');
-      const csvFileInput = document.getElementById('csvFile');
-      let statusSpan = document.getElementById('actionStatusText');
-      
-      // Fallback to credentialsStatusText if actionStatusText is not found
-      if (!statusSpan) {
-        statusSpan = document.getElementById('credentialsStatusText');
-      }
-      
-      // Check for valid credentials first
-      if (!await validateCredentials()) {
-        showCredentialErrorModal();
-        return;
-      }
-      
-      // Check if file input exists and has files
-      if (!csvFileInput) {
-        console.error('CSV file input element not found');
-        unifiedPopup.alert('CSV file input not found. Please refresh the page.', 'System Error');
-        return;
-      }
-      
-      if (!csvFileInput.files || csvFileInput.files.length === 0) {
-        unifiedPopup.alert('Please select a CSV file first.', 'No File Selected');
-        return;
-      }
-      
-      const file = csvFileInput.files[0];
-      if (!file.name.toLowerCase().endsWith('.csv')) {
-        unifiedPopup.alert('Please select a valid CSV file.', 'Invalid File Type');
-        return;
-      }
-      
-      deleteBtn.disabled = true;
-      deleteBtn.textContent = 'Deleting...';
-      
-      // Get stored credentials
-      const environmentId = localStorage.getItem('pingone_env_id');
-      const clientId = localStorage.getItem('pingone_client_id');
-      const clientSecret = localStorage.getItem('pingone_client_secret');
-      
-      const formData = new FormData();
-      formData.append('csv', csvFileInput.files[0]);
-      formData.append('environmentId', environmentId);
-      formData.append('clientId', clientId);
-      formData.append('clientSecret', clientSecret);
-      formData.append('mode', 'delete');
-      
-      showSpinnerModal('Delete', globalCSVRowCount);
-      
-      // Show worker token status at the start
-      showWorkerTokenStatus();
-      
-      // Use the global actionStatus instance
-      actionStatus.reset();
-      actionStatus.showProgress('Delete', globalCSVRowCount);
-      
-      try {
-        const response = await fetch('/delete-users', {
-          method: 'POST',
-          body: formData
-        });
-        
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-        
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = '';
-        let totalItems = globalCSVRowCount;
-        let currentProcessedCount = 0;
-        let finalProcessedCount = 0;
-        let batchCounter = 0;
-        let successCount = 0;
-        let errorCount = 0;
-        let notFoundCount = 0;
-        
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split('\n');
-          buffer = lines.pop() || '';
-          
-          for (const line of lines) {
-            if (line.trim()) {
-              try {
-                const data = JSON.parse(line);
-                
-                if (data.progress) {
-                  // Handle progress updates
-                  if (data.progress === 'started') {
-                    totalItems = data.total;
-                    currentProcessedCount = 0;
-                    // Update worker token status to success when operation starts
-                    updateWorkerTokenSuccess();
-                    updateSpinnerProgress(0, totalItems, 0, false, false);
-                  } else if (data.progress === 'processing') {
-                    currentProcessedCount = data.processed;
-                    batchCounter = data.batchCounter;
-                    successCount = data.success;
-                    errorCount = data.error;
-                    notFoundCount = data.notFound;
-                    
-                    // Update spinner with batch counter (increments by 5)
-                    updateSpinnerProgress(currentProcessedCount, totalItems, batchCounter, false, false);
-                    actionStatus.updateProgress(currentProcessedCount, totalItems);
-                  } else if (data.progress === 'complete') {
-                    finalProcessedCount = data.total;
-                    successCount = data.success;
-                    errorCount = data.errors;
-                    notFoundCount = data.notFound;
-                    batchCounter = data.batchCounter;
-                    
-                    // Show completion
-                    updateSpinnerProgress(finalProcessedCount, totalItems, batchCounter, false, true);
-                    actionStatus.updateProgress(finalProcessedCount, totalItems);
-                    actionStatus.showSuccess();
-                    
-                    // Show dynamic summary
-                    showActionSummary('Deleted', successCount, notFoundCount, errorCount);
-                    
-                    // Update last action status
-                    updateLastActionStatus('delete', successCount, notFoundCount);
-                  } else if (data.progress === 'cancelled') {
-                    finalProcessedCount = data.processed;
-                    successCount = data.success;
-                    errorCount = data.error;
-                    
-                    actionStatus.showError(['Operation was cancelled']);
-                    updateSpinnerProgress(finalProcessedCount, totalItems, batchCounter, false, true);
-                  }
-                } else if (data.error) {
-                  // Handle error response
-                  throw new Error(data.error);
-                }
-              } catch (parseError) {
-                console.warn('Failed to parse response line:', line);
-              }
-            }
-          }
-        }
-        
-        // Show final status message with actual processed count
-        if (statusSpan) {
-          statusSpan.textContent = `✅ User deletion completed! Deleted ${successCount} users from your PingOne environment.`;
-          statusSpan.style.color = '#16a34a';
-        }
-      } catch (error) {
-        console.error('Delete error:', error);
-        
-        // Check if this is a 429 error and handle it specially
-        if (is429Error(error)) {
-          handle429Error(error, 'Delete');
-        } else {
-          // Update worker token status to error if it's a token-related error
-          if (error.message.includes('token') || error.message.includes('authentication') || error.message.includes('credentials')) {
-            updateWorkerTokenError();
-          }
-          actionStatus.showError([`Delete failed: ${error.message}`]);
-          if (statusSpan) {
-            statusSpan.textContent = `❌ Delete failed: ${error.message}. Please check your CSV file format and user data.`;
-            statusSpan.style.color = '#dc2626';
-          }
-        }
-      } finally {
-        deleteBtn.disabled = false;
-        deleteBtn.textContent = 'Delete Users';
-        hideSpinnerModal();
-      }
-    }
-
-    function showSpacingInfoDialog() {
-      document.getElementById('spacingInfoDialog').showModal();
-    }
-    function closeSpacingInfoDialog() {
-      document.getElementById('spacingInfoDialog').close();
-    }
-
-    // Attach listeners to credential fields and checkbox
-    // Removed - credentials are now managed in settings page only
-
-    // Preload credentials from localStorage on page load
-    // DOMContentLoaded listener consolidated below
-    // window.addEventListener('DOMContentLoaded', function() {
-    //   // Initialize the comprehensive form persistence system
-    //   formPersistence = new FormPersistence();
-    //   
-    //   // Initialize the token management system
-    //   tokenManager = new TokenManager();
-    //   
-    //   // Initialize credential status
-    //   validateCredentials();
-    //   
-    //   // Initialize custom file input for persistence
-    //   const customFileInput = createCustomFileInput();
-    //   if (!customFileInput) {
-    //     console.warn('Custom file input initialization failed, using standard file input');
-    //   }
-    //   
-    //   // Setup clear file button functionality
-    //   const clearFileBtn = document.getElementById('clearFileBtn');
-    //   if (clearFileBtn) {
-    //     clearFileBtn.addEventListener('click', function() {
-    //       const csvFileInput = document.getElementById('csvFile');
-    //       const selectedFileNameDisplay = document.getElementById('selectedFileNameDisplay');
-    //       const headerFileName = document.getElementById('headerFileName');
-    //       const saveFileNameCheckbox = document.getElementById('saveFileNameCheckbox');
-    //
-    //       if (csvFileInput) {
-    //         csvFileInput.value = '';
-    //       }
-    //       if (selectedFileNameDisplay) {
-    //         selectedFileNameDisplay.style.display = 'none';
-    //       }
-    //       if (headerFileName) {
-    //         headerFileName.textContent = 'file with users and extension of .csv file';
-    //       }
-    //       
-    //       // Clear storage using the new keys
-    //       localStorage.removeItem('pingone_default_csv_file');
-    //       sessionStorage.removeItem('temp_csv_file_name');
-    //       
-    //       // Clear total records display
-    //       clearTotalRecordsDisplay();
-    //       globalCSVRowCount = 0;
-    //       
-    //       if (saveFileNameCheckbox) {
-    //         saveFileNameCheckbox.checked = false;
-    //         localStorage.removeItem('pingone_save_file_name');
-    //       }
-    //     });
-    //   }
-    //   
-    //   // Setup modal close button
-    //   const closeCredentialErrorModalBtn = document.getElementById('closeCredentialErrorModal');
-    //   if (closeCredentialErrorModalBtn) {
-    //     closeCredentialErrorModalBtn.addEventListener('click', closeCredentialErrorModal);
-    //   }
-    //   
-    //   // Close modal when clicking outside
-    //   const credentialErrorModal = document.getElementById('credentialErrorModal');
-    //   if (credentialErrorModal) {
-    //     credentialErrorModal.addEventListener('click', function(event) {
-    //       if (event.target === credentialErrorModal) {
-    //         closeCredentialErrorModal();
-    //       }
-    //     });
-    //   }
-    //   
-    //   // Initialize tippy.js tooltips
-    //   tippy('[data-tippy-content]', {
-    //     theme: 'pingone',
-    //     placement: 'top',
-    //     arrow: true,
-    //     duration: [200, 150],
-    //     maxWidth: 260,
-    //     minWidth: 140
-    //   });
-    // });
-
-    // File name persistence and sharing functions
-    function setupFileNamePersistence() {
-      const csvFileInput = document.getElementById('csvFile');
-      const saveFileNameCheckbox = document.getElementById('saveFileNameCheckbox');
-      const selectedFileNameDisplay = document.getElementById('selectedFileNameDisplay');
-      const selectedFileNameText = document.getElementById('selectedFileNameText');
-      
-      // Load saved file name on page load
-      loadSavedFileName();
-      
-      // Add event listener for file selection
-      if (csvFileInput) {
-        csvFileInput.addEventListener('change', function() {
-          handleFileSelection();
-        });
-        
-        // Also handle when the file input is cleared programmatically
-        csvFileInput.addEventListener('input', function() {
-          if (!this.files || this.files.length === 0) {
-            handleFileSelection();
-          }
-        });
-      }
-      
-      // Add event listener for save checkbox
-      if (saveFileNameCheckbox) {
-        saveFileNameCheckbox.addEventListener('change', function() {
-          handleSaveCheckboxChange();
-        });
+      // Auto-retry after delay (for certain operations)
+      if (operation === 'Import' || operation === 'Delete') {
+        setTimeout(() => {
+          console.log(`Auto-retrying ${operation} operation after rate limit delay...`);
+          // Could implement auto-retry logic here
+        }, 30000); // 30 second delay
       }
     }
     
-    function handleFileSelection() {
-      const csvFileInput = document.getElementById('csvFile');
-      const saveFileNameCheckbox = document.getElementById('saveFileNameCheckbox');
-      const selectedFileNameDisplay = document.getElementById('selectedFileNameDisplay');
-      const selectedFileNameText = document.getElementById('selectedFileNameText');
-      const headerFileName = document.getElementById('headerFileName');
-      const fileNameDisplay = document.getElementById('fileNameDisplay');
-      
-      if (csvFileInput.files && csvFileInput.files.length > 0) {
-        const fileName = csvFileInput.files[0].name;
-        const file = csvFileInput.files[0];
-
-        if(fileNameDisplay) {
-          fileNameDisplay.textContent = fileName;
+    // Function to check if an error is a 429 error
+    function is429Error(error) {
+      return error.message && (
+        error.message.includes('429') || 
+        error.message.includes('Too Many Requests') ||
+        error.message.includes('rate limit')
+      );
+    }
+    
+    // Function to show rate limit warning
+    function showRateLimitWarning() {
+      const rateLimitWarning = document.getElementById('rateLimitWarning');
+      if (rateLimitWarning) {
+        rateLimitWarning.style.display = 'flex';
+        
+        // Auto-hide after 60 seconds
+        setTimeout(() => {
+          hideRateLimitWarning();
+        }, 60000);
+      }
+    }
+    
+    // Function to hide rate limit warning
+    function hideRateLimitWarning() {
+      const rateLimitWarning = document.getElementById('rateLimitWarning');
+      if (rateLimitWarning) {
+        rateLimitWarning.style.display = 'none';
+      }
+    }
+    
+    // Function to count CSV rows and update status
+    async function countCSVRows(file) {
+      return new Promise((resolve, reject) => {
+        if (!file) {
+          resolve(0);
+          return;
         }
         
-        // Display the file name
+        // Check if uDSV is available
+        if (typeof uDSV === 'undefined') {
+          console.warn('uDSV library not loaded, cannot count CSV rows');
+          resolve(0); // Return 0 as fallback
+          return;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          try {
+            const csvString = e.target.result;
+            const result = uDSV.parse(csvString, {
+              header: true,
+              skipEmptyLines: true
+            });
+            const rowCount = result.data ? result.data.length : 0;
+            resolve(rowCount);
+          } catch (error) {
+            console.error('Error parsing CSV for row count:', error);
+            reject(error);
+          }
+        };
+        reader.onerror = function(error) {
+          console.error('Error reading file for row count:', error);
+          reject(error);
+        };
+        reader.readAsText(file);
+      });
+    }
+    
+    // Function to update status area with total records
+    function updateTotalRecordsDisplay(rowCount) {
+      const actionStatusText = document.getElementById('actionStatusText');
+      if (actionStatusText) {
+        actionStatusText.textContent = `Total Records: ${rowCount}`;
+      }
+    }
+    
+    // Function to clear total records display
+    function clearTotalRecordsDisplay() {
+      const actionStatusText = document.getElementById('actionStatusText');
+      if (actionStatusText) {
+        actionStatusText.textContent = '';
+      }
+    }
+    
+    // Function to create a custom file input that persists selection
+    function createCustomFileInput() {
+      const csvFile = document.getElementById('csvFile');
+      if (!csvFile) return;
+      
+      const fileInputContainer = csvFile.parentElement;
+      
+      // Create custom file input wrapper
+      const customFileInput = document.createElement('div');
+      customFileInput.className = 'custom-file-input';
+      customFileInput.style.cssText = `
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
+      `;
+      
+      // Create the actual file input (hidden)
+      const hiddenFileInput = document.createElement('input');
+      hiddenFileInput.type = 'file';
+      hiddenFileInput.accept = '.csv';
+      hiddenFileInput.id = 'csvFile';
+      hiddenFileInput.name = 'csvFile';
+      hiddenFileInput.style.display = 'none';
+      
+      // Create custom button
+      const customButton = document.createElement('button');
+      customButton.type = 'button';
+      customButton.className = 'button button-secondary';
+      customButton.textContent = 'Choose CSV File';
+      customButton.style.cssText = `
+        white-space: nowrap;
+        min-width: 140px;
+      `;
+      
+      // Create file name display
+      const fileNameDisplay = document.createElement('span');
+      fileNameDisplay.id = 'customFileNameDisplay';
+      fileNameDisplay.style.cssText = `
+        color: #6b7280;
+        font-style: italic;
+        flex: 1;
+      `;
+      fileNameDisplay.textContent = 'No file selected';
+      
+      // Create clear button
+      const clearButton = document.createElement('button');
+      clearButton.type = 'button';
+      clearButton.className = 'button button-light button-sm';
+      clearButton.textContent = 'Clear';
+      clearButton.style.display = 'none';
+      
+      // Add event listeners
+      customButton.addEventListener('click', () => {
+        hiddenFileInput.click();
+      });
+      
+      hiddenFileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          fileNameDisplay.textContent = file.name;
+          fileNameDisplay.style.color = '#e60028';
+          fileNameDisplay.style.fontStyle = 'normal';
+          clearButton.style.display = 'inline-block';
+          
+          // Save to localStorage
+          localStorage.setItem('pingone_default_csv_file', file.name);
+          
+          // Update other displays
+          updateFileDisplays(file.name);
+          
+          // Count CSV rows
+          countCSVRows(file);
+        }
+      });
+      
+      clearButton.addEventListener('click', () => {
+        hiddenFileInput.value = '';
+        fileNameDisplay.textContent = 'No file selected';
+        fileNameDisplay.style.color = '#6b7280';
+        fileNameDisplay.style.fontStyle = 'italic';
+        clearButton.style.display = 'none';
+        
+        // Clear localStorage
+        localStorage.removeItem('pingone_default_csv_file');
+        
+        // Clear other displays
+        clearFileDisplays();
+      });
+      
+      // Assemble the custom input
+      customFileInput.appendChild(customButton);
+      customFileInput.appendChild(fileNameDisplay);
+      customFileInput.appendChild(clearButton);
+      
+      // Replace the original input
+      fileInputContainer.replaceChild(customFileInput, csvFile);
+      fileInputContainer.appendChild(hiddenFileInput);
+      
+      // Restore saved file name
+      restoreSavedFileName();
+      
+      return hiddenFileInput;
+    }
+    
+    // Function to restore saved file name
+    function restoreSavedFileName() {
+      const fileNameDisplay = document.getElementById('customFileNameDisplay');
+      const clearButton = document.querySelector('.custom-file-input .button-light');
+      
+      // Check for saved default file name
+      const savedFileName = localStorage.getItem('pingone_default_csv_file');
+      if (savedFileName && fileNameDisplay) {
+        fileNameDisplay.textContent = savedFileName;
+        fileNameDisplay.style.color = '#e60028';
+        fileNameDisplay.style.fontStyle = 'normal';
+        if (clearButton) {
+          clearButton.style.display = 'inline-block';
+        }
+        
+        // Update other displays
+        updateFileDisplays(savedFileName);
+      }
+    }
+    
+    // Function to update all file displays
+    function updateFileDisplays(fileName) {
+      // Update main page displays
+      const selectedFileNameDisplay = document.getElementById('selectedFileNameDisplay');
+      const selectedFileNameText = document.getElementById('selectedFileNameText');
+      const defaultFileName = document.getElementById('defaultFileName');
+      
+      if (selectedFileNameDisplay && selectedFileNameText) {
         selectedFileNameText.innerHTML = `<strong>Selected:</strong> <span style="color:#e60028;">${fileName}</span>`;
         selectedFileNameDisplay.style.display = 'block';
-        
-        // Update the header text with the actual file name
-        if (headerFileName) {
-          headerFileName.textContent = fileName;
-        }
-        
-        // Count CSV rows and update status
-        countCSVRows(file).then(rowCount => {
-          updateTotalRecordsDisplay(rowCount);
-        }).catch(error => {
-          console.error('Error counting CSV rows:', error);
-          updateTotalRecordsDisplay(0);
-        });
-        
-        // Save based on checkbox state
-        if (saveFileNameCheckbox && saveFileNameCheckbox.checked) {
-          // Save to localStorage for persistence across sessions and pages
-          localStorage.setItem('pingone_default_csv_file', fileName);
-          sessionStorage.removeItem('temp_csv_file_name');
-                    } else {
-          // Save to sessionStorage for temporary sharing between pages
-          sessionStorage.setItem('temp_csv_file_name', fileName);
-          localStorage.removeItem('pingone_default_csv_file');
-        }
-
-        // Save the last selected file name globally
-        localStorage.setItem('lastSelectedFileName', fileName);
-      } else {
-        // No file selected
-        selectedFileNameDisplay.style.display = 'none';
-        if(fileNameDisplay) {
-          fileNameDisplay.textContent = 'No file selected';
-        }
-        localStorage.removeItem('pingone_default_csv_file');
-        sessionStorage.removeItem('temp_csv_file_name');
-        
-        // Clear total records display
-        clearTotalRecordsDisplay();
-        globalCSVRowCount = 0; // Reset global count here
-        
-        // Reset the header text to default
-        if (headerFileName) {
-          headerFileName.textContent = 'file with users and extension of .csv file';
-        }
       }
-    }
-    
-    function handleSaveCheckboxChange() {
-      const csvFileInput = document.getElementById('csvFile');
-      const saveFileNameCheckbox = document.getElementById('saveFileNameCheckbox');
       
-      if (csvFileInput.files && csvFileInput.files.length > 0) {
-        const fileName = csvFileInput.files[0].name;
-        
-        if (saveFileNameCheckbox.checked) {
-          // Move from sessionStorage to localStorage
-          localStorage.setItem('pingone_default_csv_file', fileName);
-          sessionStorage.removeItem('temp_csv_file_name');
-        } else {
-          // Move from localStorage to sessionStorage
-          sessionStorage.setItem('temp_csv_file_name', fileName);
-          localStorage.removeItem('pingone_default_csv_file');
-        }
+      if (defaultFileName) {
+        defaultFileName.textContent = fileName;
       }
     }
     
-    function loadSavedFileName() {
+    // Function to clear all file displays
+    function clearFileDisplays() {
       const selectedFileNameDisplay = document.getElementById('selectedFileNameDisplay');
-      const selectedFileNameText = document.getElementById('selectedFileNameText');
-      const saveFileNameCheckbox = document.getElementById('saveFileNameCheckbox');
-      const headerFileName = document.getElementById('headerFileName');
-      const fileNameDisplay = document.getElementById('fileNameDisplay');
+      const defaultFileName = document.getElementById('defaultFileName');
       
-      // First check localStorage for persistent file name (default file from settings)
+      if (selectedFileNameDisplay) {
+        selectedFileNameDisplay.style.display = 'none';
+      }
+      
+      if (defaultFileName) {
+        defaultFileName.textContent = '';
+      }
+      
+      clearTotalRecordsDisplay();
+    }
+    
+    // Function to load saved file name
+    function loadSavedFileName() {
       let fileName = localStorage.getItem('pingone_default_csv_file');
       if (fileName) {
-        if(fileNameDisplay) {
-          fileNameDisplay.textContent = fileName;
-        }
-        selectedFileNameText.innerHTML = `<strong>Default File:</strong> <span style="color:#e60028;">${fileName}</span>`;
-        selectedFileNameDisplay.style.display = 'block';
-        if (saveFileNameCheckbox) saveFileNameCheckbox.checked = true;
+        const selectedFileNameDisplay = document.getElementById('selectedFileNameDisplay');
+        const selectedFileNameText = document.getElementById('selectedFileNameText');
+        const defaultFileName = document.getElementById('defaultFileName');
         
-        // Update the header text with the saved file name
-        if (headerFileName) {
-          headerFileName.textContent = fileName;
+        if (selectedFileNameDisplay && selectedFileNameText) {
+          selectedFileNameText.innerHTML = `<strong>Default file:</strong> <span style="color:#e60028;">${fileName}</span>`;
+          selectedFileNameDisplay.style.display = 'block';
         }
         
-        // Note: We can't count rows here since we don't have the actual file object
-        // The row count will be updated when the user selects the file again
-        clearTotalRecordsDisplay();
-            return;
-          }
-      
-      // Then check sessionStorage for temporary file name
-      fileName = sessionStorage.getItem('temp_csv_file_name');
-      if (fileName) {
-        if(fileNameDisplay) {
-          fileNameDisplay.textContent = fileName;
+        if (defaultFileName) {
+          defaultFileName.textContent = fileName;
         }
-        selectedFileNameText.innerHTML = `<strong>Selected:</strong> <span style="color:#e60028;">${fileName}</span>`;
-        selectedFileNameDisplay.style.display = 'block';
-        if (saveFileNameCheckbox) saveFileNameCheckbox.checked = false;
-        
-        // Update the header text with the temporary file name
-        if (headerFileName) {
-          headerFileName.textContent = fileName;
-        }
-        
-        // Note: We can't count rows here since we don't have the actual file object
-        // The row count will be updated when the user selects the file again
-        clearTotalRecordsDisplay();
-        return;
       }
-      
-      // No saved file name
-      selectedFileNameDisplay.style.display = 'none';
-      
-      // Clear total records display
-      clearTotalRecordsDisplay();
-      
-      // Reset the header text to default
-      if (headerFileName) {
-        headerFileName.textContent = 'file with users and extension of .csv file';
-      }
-    }
-
-    // Function to sync file names when navigating between pages
-    function syncFileNameBetweenPages() {
-      // This function can be called when navigating to ensure file names are synced
-      // It's automatically called by loadSavedFileName() on page load
-      loadSavedFileName();
     }
     
-    // Listen for storage events to sync file names across tabs/windows
-    window.addEventListener('storage', function(e) {
-      if (e.key === 'pingone_default_csv_file' || e.key === 'temp_csv_file_name') {
-        syncFileNameBetweenPages();
+    // Function to show credential error details modal
+    function showCredentialErrorDetails() {
+      if (window.lastCredentialError) {
+        showCredentialErrorModal(window.lastCredentialError.message, window.lastCredentialError.details);
+      } else {
+        showCredentialErrorModal('Credential validation failed', 'No detailed error information available.');
       }
-    });
-
+    }
+    
+    // Credential Error Modal Functions
+    function showCredentialErrorModal(errorMessage = '', errorDetails = '') {
+      const modal = document.getElementById('credentialErrorModal');
+      const errorDetailsElement = document.getElementById('credentialErrorDetails');
+      
+      if (modal) {
+        // Set error details if provided
+        if (errorDetailsElement) {
+          if (errorDetails) {
+            errorDetailsElement.textContent = errorDetails;
+            errorDetailsElement.style.display = 'block';
+          } else {
+            errorDetailsElement.style.display = 'none';
+          }
+        }
+        
+        modal.style.display = 'block';
+      }
+    }
+    
+    function hideCredentialErrorModal() {
+      const modal = document.getElementById('credentialErrorModal');
+      if (modal) {
+        modal.style.display = 'none';
+      }
+    }
+    
+    function toggleTroubleshooting() {
+      const content = document.getElementById('troubleshootingContent');
+      const icon = document.getElementById('troubleshootingIcon');
+      
+      if (content && icon) {
+        if (content.style.display === 'none' || !content.style.display) {
+          content.style.display = 'block';
+          icon.textContent = '▼';
+        } else {
+          content.style.display = 'none';
+          icon.textContent = '▶';
+        }
+      }
+    }
+    
     // Modal Spinner Control Functions
     function showSpinnerModal(action, totalItems = 0) {
       const modal = document.getElementById('spinnerModal');
@@ -1805,12 +1030,12 @@
           progress.textContent = 'Processing complete';
         } else {
           // Show batch counter if provided, otherwise use the completed count
-          const displayCount = batchCounter > 0 ? batchCounter * 5 : Math.min(completed, total);
+          const displayCount = batchCounter > 0 ? batchCounter * 5 : Math.min(completed * 5, total);
           
           if (summary) {
             progress.textContent = `📊 Summary: ${displayCount} of ${total} completed so far...`;
           } else {
-            progress.textContent = `Processing ${displayCount} of ${total} users...`;
+            progress.textContent = `${displayCount} of ${total} completed...`;
           }
         }
       }
@@ -1818,454 +1043,29 @@
     
     function hideSpinnerModal() {
       const modal = document.getElementById('spinnerModal');
-      if (modal) {
-        modal.style.display = 'none';
-      }
+      modal.style.display = 'none';
       // Also hide worker token status when hiding spinner
       hideWorkerTokenStatus();
     }
-
-    // Test function to verify status box functionality
-    function testStatusBox() {
-      console.log('Testing status box functionality...');
-      actionStatus.showCredentialsValidated();
-      
-      setTimeout(() => {
-        // Use a dynamic test count instead of hardcoded 10
-        const testCount = 15;
-        actionStatus.showProgress('Test', testCount);
-        
-        let counter = 0;
-        const interval = setInterval(() => {
-          counter += 2;
-          actionStatus.updateProgress(counter, testCount);
-          
-          if (counter >= testCount) {
-            clearInterval(interval);
-            setTimeout(() => {
-              actionStatus.showSuccess();
-            }, 500);
-          }
-        }, 200);
-      }, 1000);
-    }
-
-    // Comprehensive Form Persistence System
-    class FormPersistence {
-      constructor() {
-        this.storagePrefix = 'pingone_';
-        this.formElements = new Map();
-        this.init();
-      }
-      
-      init() {
-        this.setupFormElements();
-        this.setupEventListeners();
-        this.restoreFormState();
-      }
-      
-      setupFormElements() {
-        // Text inputs
-        this.addElement('envIdInput', 'env_id', 'text');
-        this.addElement('clientIdInput', 'client_id', 'text');
-        this.addElement('clientSecretInput', 'client_secret', 'text');
-        
-        // Checkboxes
-        this.addElement('saveAllCredentials', 'save_all_credentials', 'checkbox');
-        this.addElement('rememberClientSecret', 'remember_client_secret', 'checkbox');
-        this.addElement('saveFileNameCheckbox', 'save_file_name', 'checkbox');
-        
-        // File input (special handling)
-        this.addElement('csvFile', 'csv_file_name', 'file');
-      }
-      
-      addElement(elementId, storageKey, type) {
-        const element = document.getElementById(elementId);
-        if (element) {
-          this.formElements.set(elementId, {
-            element: element,
-            storageKey: this.storagePrefix + storageKey,
-            type: type
-          });
-        }
-      }
-      
-      setupEventListeners() {
-        this.formElements.forEach((config, elementId) => {
-          const { element, storageKey, type } = config;
-          
-          if (type === 'text' || type === 'password') {
-            // Save on input and change
-            element.addEventListener('input', () => this.saveElement(elementId));
-            element.addEventListener('change', () => this.saveElement(elementId));
-          } else if (type === 'checkbox') {
-            // Save on change
-            element.addEventListener('change', () => this.saveElement(elementId));
-          } else if (type === 'file') {
-            // Special handling for file input
-            element.addEventListener('change', () => this.handleFileSelection());
-          }
-        });
-        
-        // Special handling for credential fields - save based on checkbox state
-        const credentialFields = ['envIdInput', 'clientIdInput', 'clientSecretInput'];
-        credentialFields.forEach(fieldId => {
-          const element = document.getElementById(fieldId);
-          if (element) {
-            element.addEventListener('input', () => this.handleCredentialFieldChange(fieldId));
-            element.addEventListener('change', () => this.handleCredentialFieldChange(fieldId));
-          }
-        });
-      }
-      
-      handleCredentialFieldChange(fieldId) {
-        const saveAllBox = document.getElementById('saveAllCredentials');
-        if (saveAllBox && saveAllBox.checked) {
-          this.saveElement(fieldId);
-        }
-      }
-      
-      handleFileSelection() {
-        const csvFileInput = document.getElementById('csvFile');
-        const saveFileNameCheckbox = document.getElementById('saveFileNameCheckbox');
-        
-        if (csvFileInput.files && csvFileInput.files.length > 0) {
-          const fileName = csvFileInput.files[0].name;
-          
-          // Update display
-          const selectedFileNameDisplay = document.getElementById('selectedFileNameDisplay');
-          const selectedFileNameText = document.getElementById('selectedFileNameText');
-          
-          if (selectedFileNameDisplay && selectedFileNameText) {
-            selectedFileNameText.innerHTML = `<strong>Selected:</strong> <span style="color:#e60028;">${fileName}</span>`;
-            selectedFileNameDisplay.style.display = 'block';
-          }
-          
-          // Save based on checkbox state
-          if (saveFileNameCheckbox && saveFileNameCheckbox.checked) {
-            localStorage.setItem(this.storagePrefix + 'csv_file_name', fileName);
-            sessionStorage.removeItem('temp_csv_file_name');
-          } else {
-            sessionStorage.setItem('temp_csv_file_name', fileName);
-            localStorage.removeItem(this.storagePrefix + 'csv_file_name');
-          }
-        } else {
-          // Clear display and storage
-          const selectedFileNameDisplay = document.getElementById('selectedFileNameDisplay');
-          if (selectedFileNameDisplay) {
-            selectedFileNameDisplay.style.display = 'none';
-          }
-          localStorage.removeItem(this.storagePrefix + 'csv_file_name');
-          sessionStorage.removeItem('temp_csv_file_name');
-        }
-      }
-      
-      saveElement(elementId) {
-        const config = this.formElements.get(elementId);
-        if (!config) return;
-        
-        const { element, storageKey, type } = config;
-        
-        if (type === 'text' || type === 'password') {
-          localStorage.setItem(storageKey, element.value);
-        } else if (type === 'checkbox') {
-          localStorage.setItem(storageKey, element.checked.toString());
-        }
-      }
-      
-      restoreFormState() {
-        this.formElements.forEach((config, elementId) => {
-          const { element, storageKey, type } = config;
-          
-          if (type === 'text' || type === 'password') {
-            const savedValue = localStorage.getItem(storageKey);
-            if (savedValue) {
-              element.value = savedValue;
-            }
-          } else if (type === 'checkbox') {
-            const savedValue = localStorage.getItem(storageKey);
-            if (savedValue !== null) {
-              element.checked = savedValue === 'true';
-            }
-          }
-        });
-        
-        // Special handling for file name restoration
-        this.restoreFileName();
-      }
-      
-      restoreFileName() {
-        const selectedFileNameDisplay = document.getElementById('selectedFileNameDisplay');
-        const selectedFileNameText = document.getElementById('selectedFileNameText');
-        const saveFileNameCheckbox = document.getElementById('saveFileNameCheckbox');
-        
-        // First check localStorage for persistent file name
-        let fileName = localStorage.getItem(this.storagePrefix + 'csv_file_name');
-        if (fileName) {
-          if (selectedFileNameText) {
-            selectedFileNameText.innerHTML = `<strong>Selected:</strong> <span style="color:#e60028;">${fileName}</span>`;
-          }
-          if (selectedFileNameDisplay) {
-            selectedFileNameDisplay.style.display = 'block';
-          }
-          if (saveFileNameCheckbox) {
-            saveFileNameCheckbox.checked = true;
-          }
-          return;
-        }
-        
-        // Then check sessionStorage for temporary file name
-        fileName = sessionStorage.getItem('temp_csv_file_name');
-        if (fileName) {
-          if (selectedFileNameText) {
-            selectedFileNameText.innerHTML = `<strong>Selected:</strong> <span style="color:#e60028;">${fileName}</span>`;
-          }
-          if (selectedFileNameDisplay) {
-            selectedFileNameDisplay.style.display = 'block';
-          }
-          if (saveFileNameCheckbox) {
-            saveFileNameCheckbox.checked = false;
-          }
-          return;
-        }
-        
-        // No saved file name
-        if (selectedFileNameDisplay) {
-          selectedFileNameDisplay.style.display = 'none';
-        }
-      }
-      
-      clearAllSettings() {
-        // Clear all localStorage items with our prefix
-        Object.keys(localStorage).forEach(key => {
-          if (key.startsWith(this.storagePrefix)) {
-            localStorage.removeItem(key);
-          }
-        });
-        
-        // Clear sessionStorage items
-        sessionStorage.removeItem('temp_csv_file_name');
-        
-        // Reset form elements
-        this.formElements.forEach((config, elementId) => {
-          const { element, type } = config;
-          
-          if (type === 'text' || type === 'password') {
-            element.value = '';
-          } else if (type === 'checkbox') {
-            element.checked = false;
-          }
-        });
-        
-        // Clear file input and display
-        const csvFileInput = document.getElementById('csvFile');
-        if (csvFileInput) {
-          csvFileInput.value = '';
-        }
-        
-        const selectedFileNameDisplay = document.getElementById('selectedFileNameDisplay');
-        if (selectedFileNameDisplay) {
-          selectedFileNameDisplay.style.display = 'none';
-        }
-        
-        // Reset credential validation status
-        window.credentialsValidated = false;
-        const statusSpan = document.getElementById('credentialsStatus');
-        if (statusSpan) {
-          statusSpan.textContent = 'Credentials not validated';
-          statusSpan.style.color = '#6b7280';
-        }
-        
-        console.log('All settings cleared successfully');
-      }
-    }
-
-    // Create global instance
-    let formPersistence;
-
-    // Function to clear all settings
-    async function clearAllSettings() {
-      const confirmed = await new Promise((resolve) => {
-        unifiedPopup.confirm(
-          'Are you sure you want to clear all settings? This will reset all form fields, checkboxes, and saved data. This action cannot be undone.',
-          'Confirm Clear Settings',
-          () => resolve(true),
-          () => resolve(false)
-        );
+    
+    // Initialize tooltip system when DOM is loaded
+    document.addEventListener('DOMContentLoaded', function() {
+      tippy('[data-tippy-content]', {
+        theme: 'pingone',
+        placement: 'top',
+        arrow: true,
+        animation: 'shift-away',
+        duration: [200, 150],
+        delay: [0, 0],
+        interactive: false,
+        allowHTML: true,
+        maxWidth: 260,
+        offset: [0, 8],
+        // Keep tooltip on hover/tap, no timeout
+        trigger: 'mouseenter focus',
+        touch: ['hold', 500],
       });
-      
-      if (confirmed) {
-        if (formPersistence) {
-          formPersistence.clearAllSettings();
-        }
-        
-        // Clear token management system
-        if (tokenManager) {
-          tokenManager.clearToken();
-        }
-        
-        unifiedPopup.alert('All settings have been cleared successfully!', 'Settings Cleared');
-      }
-    }
-
-    // Listen for storage events to sync file names across tabs/windows
-    window.addEventListener('storage', function(e) {
-      if (e.key === 'pingone_default_csv_file' || e.key === 'temp_csv_file_name') {
-        if (formPersistence) {
-          formPersistence.restoreFileName();
-        }
-      }
     });
-
-    // Tooltip System
-    class TooltipManager {
-      constructor() {
-        this.init();
-      }
-
-      init() {
-        this.setupCustomTooltips();
-        this.setupEnhancedInputs();
-        this.setupButtonTooltips();
-      }
-
-      setupCustomTooltips() {
-        const tooltips = document.querySelectorAll('.custom-tooltip');
-        
-        tooltips.forEach(tooltip => {
-          const icon = tooltip.querySelector('.tooltip-icon');
-          const content = tooltip.querySelector('.tooltip-content');
-          
-          if (!icon || !content) return;
-
-          // Desktop hover events
-          tooltip.addEventListener('mouseenter', () => {
-            this.showTooltip(tooltip, content);
-          });
-
-          tooltip.addEventListener('mouseleave', () => {
-            this.hideTooltip(tooltip, content);
-          });
-
-          // Mobile touch events
-          tooltip.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            this.showTooltip(tooltip, content);
-          });
-
-          tooltip.addEventListener('touchend', (e) => {
-            e.preventDefault();
-            setTimeout(() => {
-              this.hideTooltip(tooltip, content);
-            }, 2000); // Hide after 2 seconds on mobile
-          });
-
-          // Hide tooltip when clicking outside
-          document.addEventListener('click', (e) => {
-            if (!tooltip.contains(e.target)) {
-              this.hideTooltip(tooltip, content);
-            }
-          });
-        });
-      }
-
-      setupEnhancedInputs() {
-        const inputs = document.querySelectorAll('.enhanced-input');
-        
-        inputs.forEach(input => {
-          // Add focus event for better accessibility
-          input.addEventListener('focus', () => {
-            input.setAttribute('aria-describedby', 'tooltip-' + input.id);
-          });
-
-          input.addEventListener('blur', () => {
-            input.removeAttribute('aria-describedby');
-          });
-        });
-      }
-
-      setupButtonTooltips() {
-        const buttons = document.querySelectorAll('.button-tooltip');
-        
-        buttons.forEach(button => {
-          // Add focus event for better accessibility
-          button.addEventListener('focus', () => {
-            button.setAttribute('aria-describedby', 'tooltip-' + button.id);
-          });
-
-          button.addEventListener('blur', () => {
-            button.removeAttribute('aria-describedby');
-          });
-        });
-      }
-
-      showTooltip(tooltip, content) {
-        tooltip.classList.add('show');
-        content.style.opacity = '1';
-        content.style.visibility = 'visible';
-      }
-
-      hideTooltip(tooltip, content) {
-        tooltip.classList.remove('show');
-        content.style.opacity = '0';
-        content.style.visibility = 'hidden';
-      }
-    }
-
-    // Initialize tooltip system
-    let tooltipManager;
-    document.addEventListener('DOMContentLoaded', () => {
-      tooltipManager = new TooltipManager();
-    });
-
-    function hideSpinnerModal() {
-      const modal = document.getElementById('spinnerModal');
-      if (modal) {
-        modal.style.display = 'none';
-      }
-    }
-    
-    // Credential Error Modal Functions
-    function showCredentialErrorModal(errorMessage = '', errorDetails = '') {
-      const modal = document.getElementById('credentialErrorModal');
-      const errorDetailsElement = document.getElementById('credentialErrorDetails');
-      
-      if (modal) {
-        // Set error details if provided
-        if (errorDetailsElement) {
-          if (errorDetails) {
-            errorDetailsElement.textContent = errorDetails;
-            errorDetailsElement.style.display = 'block';
-          } else {
-            errorDetailsElement.style.display = 'none';
-          }
-        }
-        
-        modal.style.display = 'block';
-      }
-    }
-    
-    function hideCredentialErrorModal() {
-      const modal = document.getElementById('credentialErrorModal');
-      if (modal) {
-        modal.style.display = 'none';
-      }
-    }
-    
-    function toggleTroubleshooting() {
-      const content = document.getElementById('troubleshootingContent');
-      const icon = document.getElementById('troubleshootingIcon');
-      
-      if (content && icon) {
-        if (content.style.display === 'none' || !content.style.display) {
-          content.style.display = 'block';
-          icon.textContent = '▼';
-        } else {
-          content.style.display = 'none';
-          icon.textContent = '▶';
-        }
-      }
-    }
     
     // Add event listeners for modal
     document.addEventListener('DOMContentLoaded', function() {
@@ -2297,1007 +1097,6 @@
         });
       }
     });
-    
-    // Function to show credential error details modal
-    function showCredentialErrorDetails() {
-      if (window.lastCredentialError) {
-        showCredentialErrorModal(window.lastCredentialError.message, window.lastCredentialError.details);
-      } else {
-        showCredentialErrorModal('Credential validation failed', 'No detailed error information available.');
-      }
-    }
-
-    // Initialize tippy.js on all elements with data-tippy-content
-    document.addEventListener('DOMContentLoaded', function() {
-      tippy('[data-tippy-content]', {
-        theme: 'pingone',
-        placement: 'top',
-        arrow: true,
-        animation: 'shift-away',
-        duration: [200, 150],
-        delay: [0, 0],
-        interactive: false,
-        allowHTML: true,
-        maxWidth: 260,
-        offset: [0, 8],
-        // Keep tooltip on hover/tap, no timeout
-        trigger: 'mouseenter focus',
-        touch: ['hold', 500],
-      });
-    });
-
-    // Credential validation functions
-    async function validateCredentials() {
-      // Check if we have stored credentials
-      const environmentId = localStorage.getItem('pingone_env_id');
-      const clientId = localStorage.getItem('pingone_client_id');
-      const clientSecret = localStorage.getItem('pingone_client_secret');
-      
-      if (!environmentId || !clientId || !clientSecret) {
-        updateCredentialsStatus('Missing credentials', '#dc2626');
-        return false;
-      }
-      
-      // Check if we have a valid token using the global tokenManager
-      if (!tokenManager) {
-        tokenManager = new TokenManager();
-      }
-      const token = await tokenManager.getValidToken();
-      
-      if (!token) {
-        updateCredentialsStatus('Invalid credentials', '#dc2626');
-        return false;
-      }
-      
-      // Load saved environment name if available
-      const savedEnvironmentName = localStorage.getItem('pingone_environment_name');
-      if (savedEnvironmentName) {
-        tokenManager.updateEnvironmentNameDisplay(savedEnvironmentName);
-      } else {
-        // If no saved environment name, show the environment ID as fallback
-        tokenManager.updateEnvironmentNameDisplay(null, environmentId);
-      }
-      
-      updateCredentialsStatus('Using saved credentials', '#16a34a');
-      return true;
-    }
-    
-    function updateCredentialsStatus(message, color) {
-      const statusText = document.getElementById('credentialsStatusText');
-      if (statusText) {
-        statusText.textContent = message;
-        statusText.style.color = color;
-      }
-    }
-    
-    function showCredentialErrorModal() {
-      const modal = document.getElementById('credentialErrorModal');
-      if (modal) {
-        modal.style.display = 'block';
-      }
-    }
-    
-    function closeCredentialErrorModal() {
-      const modal = document.getElementById('credentialErrorModal');
-      if (modal) {
-        modal.style.display = 'none';
-      }
-    }
-    
-    function openSettings() {
-      window.open('settings.html', '_blank');
-      closeCredentialErrorModal();
-    }
-    
-    function updateLastActionStatus(action, successCount, skippedCount) {
-      const lastActionText = document.getElementById('lastActionText');
-      if (lastActionText) {
-        const now = new Date();
-        const timeString = now.toLocaleTimeString('en-US', { 
-          hour: 'numeric', 
-          minute: '2-digit',
-          hour12: true 
-        });
-        
-        let message = '';
-        if (action === 'import') {
-          message = `Last imported ${successCount} items at ${timeString}`;
-        } else if (action === 'delete') {
-          message = `Last deleted ${successCount} items at ${timeString}`;
-        } else if (action === 'modify') {
-          message = `Last modified ${successCount} items at ${timeString}`;
-        }
-        
-        if (skippedCount > 0) {
-          message += ` (${skippedCount} skipped)`;
-        }
-        
-        lastActionText.textContent = message;
-      }
-    }
-
-    // Function to modify users from CSV
-    async function modifyCSVUsers() {
-      const modifyBtn = document.getElementById('modifyUsersBtn');
-      const csvFileInput = document.getElementById('csvFile');
-      let statusSpan = document.getElementById('actionStatusText');
-      
-      // Fallback to credentialsStatusText if actionStatusText is not found
-      if (!statusSpan) {
-        statusSpan = document.getElementById('credentialsStatusText');
-      }
-      
-      // Check for valid credentials first
-      if (!await validateCredentials()) {
-        showCredentialErrorModal();
-        return;
-      }
-      
-      // Check if file input exists and has files
-      if (!csvFileInput) {
-        console.error('CSV file input element not found');
-        unifiedPopup.alert('CSV file input not found. Please refresh the page.', 'System Error');
-        return;
-      }
-      
-      if (!csvFileInput.files || csvFileInput.files.length === 0) {
-        unifiedPopup.alert('Please select a CSV file first.', 'No File Selected');
-        return;
-      }
-      
-      const file = csvFileInput.files[0];
-      if (!file.name.toLowerCase().endsWith('.csv')) {
-        unifiedPopup.alert('Please select a valid CSV file.', 'Invalid File Type');
-        return;
-      }
-      
-      modifyBtn.disabled = true;
-      modifyBtn.textContent = 'Modifying...';
-      
-      // Get stored credentials
-      const environmentId = localStorage.getItem('pingone_env_id');
-      const clientId = localStorage.getItem('pingone_client_id');
-      const clientSecret = localStorage.getItem('pingone_client_secret');
-      
-      const formData = new FormData();
-      formData.append('csv', file);
-      formData.append('environmentId', environmentId);
-      formData.append('clientId', clientId);
-      formData.append('clientSecret', clientSecret);
-      formData.append('mode', 'modify');
-      
-      showSpinnerModal('Modify', globalCSVRowCount);
-      
-      // Show worker token status at the start
-      showWorkerTokenStatus();
-      
-      // Use the global actionStatus instance
-      actionStatus.reset();
-      actionStatus.showProgress('Modify', globalCSVRowCount);
-      
-      try {
-        const response = await fetch('/import-users', {
-          method: 'POST',
-          body: formData
-        });
-        
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-        
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = '';
-        let totalItems = globalCSVRowCount; // Use actual CSV row count
-        let currentProcessedCount = 0;
-        let finalProcessedCount = 0;
-        let lastProcessedCount = 0;
-        
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split('\n');
-          buffer = lines.pop() || '';
-          
-          for (const line of lines) {
-            if (line.trim()) {
-              try {
-                const data = JSON.parse(line);
-                
-                if (data.progress) {
-                  // Handle progress updates
-                  if (data.processed !== undefined) {
-                    currentProcessedCount = data.processed;
-                    finalProcessedCount = currentProcessedCount;
-                    lastProcessedCount = currentProcessedCount;
-                    
-                    // Update worker token status to success when operation starts
-                    if (currentProcessedCount === 0) {
-                      updateWorkerTokenSuccess();
-                    }
-                    
-                    actionStatus.updateProgress(currentProcessedCount, totalItems);
-                  }
-                } else if (Array.isArray(data)) {
-                  // This is the final report array
-                  totalItems = data.length;
-                  finalProcessedCount = data.length;
-                  
-                  // Parse the final report to get counts
-      let successCount = 0;
-                  let skippedCount = 0;
-      let errorCount = 0;
-                  
-                  data.forEach(item => {
-                    if (item.status === 'modified') {
-                      successCount++;
-                    } else if (item.status === 'skipped') {
-                      skippedCount++;
-                    } else if (item.status === 'error') {
-                      errorCount++;
-                    }
-                  });
-                  
-                  // Show dynamic summary
-                  showActionSummary('Modified', successCount, skippedCount, errorCount);
-                  
-                  // Update last action status
-                  updateLastActionStatus('modify', successCount, skippedCount);
-                }
-              } catch (parseError) {
-                console.warn('Failed to parse response line:', line);
-              }
-            }
-          }
-        }
-        
-        // Show completion message
-        actionStatus.updateProgress(finalProcessedCount, totalItems);
-        actionStatus.showSuccess();
-        
-        // Show final status message with actual processed count
-        const processedCount = finalProcessedCount > 0 ? finalProcessedCount : totalItems;
-        if (statusSpan) {
-          statusSpan.textContent = `✅ User modification completed! Modified ${processedCount} users in your PingOne environment.`;
-          statusSpan.style.color = '#16a34a';
-        }
-      } catch (error) {
-        console.error('Modify error:', error);
-        
-        // Check if this is a 429 error and handle it specially
-        if (is429Error(error)) {
-          handle429Error(error, 'Modify');
-        } else {
-          // Update worker token status to error if it's a token-related error
-          if (error.message.includes('token') || error.message.includes('authentication') || error.message.includes('credentials')) {
-            updateWorkerTokenError();
-          }
-          actionStatus.showError([`Modify failed: ${error.message}`]);
-          if (statusSpan) {
-            statusSpan.textContent = `❌ Modify failed: ${error.message}. Please check your CSV file format and user data.`;
-            statusSpan.style.color = '#dc2626';
-          }
-        }
-      } finally {
-        modifyBtn.disabled = false;
-        modifyBtn.textContent = 'Modify Users';
-        hideSpinnerModal();
-      }
-    }
-
-    // Global variable to store CSV row count
-    globalCSVRowCount = 0;
-    
-    // Function to handle 429 (Too Many Requests) errors gracefully
-    function handle429Error(error, operation) {
-      console.error(`${operation} error (429):`, error);
-      
-      // Show user-friendly message
-      const statusBox = document.getElementById('statusBox');
-      const rateLimitMessage = `
-        <div class="alert alert-warning">
-          <strong>Rate Limit Exceeded</strong><br>
-          PingOne API is temporarily limiting requests. This is normal for bulk operations.<br>
-          <strong>What to do:</strong>
-          <ul>
-            <li>Wait 30-60 seconds before trying again</li>
-            <li>Try with fewer users at once</li>
-            <li>Check your PingOne environment limits</li>
-          </ul>
-          <small>Technical details: ${error.message}</small>
-        </div>
-      `;
-      
-      if (statusBox) {
-        statusBox.innerHTML = rateLimitMessage;
-      }
-      
-      // Show rate limit warning banner
-      showRateLimitWarning();
-      
-      // Auto-retry after delay (for certain operations)
-      if (operation === 'Import' || operation === 'Delete') {
-        setTimeout(() => {
-          console.log(`Auto-retrying ${operation} operation after rate limit delay...`);
-          // Could implement auto-retry logic here
-        }, 30000); // 30 second delay
-      }
-    }
-    
-    // Function to check if an error is a 429 error
-    function is429Error(error) {
-      return error.message && (
-        error.message.includes('429') || 
-        error.message.includes('Too Many Requests') ||
-        error.message.includes('rate limit')
-      );
-    }
-    
-    // Function to show rate limit warning
-    function showRateLimitWarning() {
-      const rateLimitWarning = document.getElementById('rateLimitWarning');
-      if (rateLimitWarning) {
-        rateLimitWarning.style.display = 'flex';
-        
-        // Auto-hide after 60 seconds
-        setTimeout(() => {
-          hideRateLimitWarning();
-        }, 60000);
-      }
-    }
-    
-    // Function to hide rate limit warning
-    function hideRateLimitWarning() {
-      const rateLimitWarning = document.getElementById('rateLimitWarning');
-      if (rateLimitWarning) {
-        rateLimitWarning.style.display = 'none';
-      }
-    }
-    
-    // Function to ensure Papa Parse is loaded
-    function ensurePapaParseLoaded() {
-      return new Promise((resolve, reject) => {
-        // Check if Papa Parse is already loaded
-        if (typeof Papa !== 'undefined' && Papa.parse) {
-          console.log('✅ Papa Parse is already loaded');
-          resolve();
-          return;
-        }
-        
-        // Wait for Papa Parse to load
-        let attempts = 0;
-        const maxAttempts = 100; // 10 seconds max wait
-        
-        const checkPapaParse = () => {
-          attempts++;
-          
-          if (typeof Papa !== 'undefined' && Papa.parse) {
-            console.log('✅ Papa Parse loaded after waiting');
-            resolve();
-            return;
-          }
-          
-          if (attempts >= maxAttempts) {
-            console.error('❌ Papa Parse failed to load after 10 seconds, trying fallback...');
-            // Try to load from fallback CDN
-            loadPapaParseFallback().then(resolve).catch(reject);
-            return;
-          }
-          
-          setTimeout(checkPapaParse, 100);
-        };
-        
-        checkPapaParse();
-      });
-    }
-    
-    // Function to load Papa Parse from fallback CDN
-    function loadPapaParseFallback() {
-      return new Promise((resolve, reject) => {
-        console.log('🔄 Attempting to load Papa Parse from fallback CDN...');
-        
-        const script = document.createElement('script');
-        script.src = 'https://unpkg.com/papaparse@5.5.3/papaparse.min.js';
-        script.async = true;
-        
-        script.onload = () => {
-          console.log('✅ Papa Parse loaded from fallback CDN');
-          resolve();
-        };
-        
-        script.onerror = () => {
-          console.error('❌ Papa Parse failed to load from fallback CDN');
-          reject(new Error('Papa Parse library failed to load from all sources'));
-        };
-        
-        document.head.appendChild(script);
-      });
-    }
-    
-    // Function to count CSV rows and update status
-    async function countCSVRows(file) {
-      return new Promise(async (resolve, reject) => {
-        if (!file) {
-          globalCSVRowCount = 0;
-          resolve(0);
-          return;
-        }
-        try {
-          // Ensure CSV parser is loaded
-          await ensureCSVParserLoaded();
-          const reader = new FileReader();
-          reader.onload = function(e) {
-            try {
-              const csvString = e.target.result;
-              const result = uDSV.parse(csvString, {
-                header: true,
-                skipEmptyLines: true
-              });
-              const rowCount = result.data ? result.data.length : 0;
-              globalCSVRowCount = rowCount; // Store globally
-              resolve(rowCount);
-            } catch (error) {
-              console.error('Error parsing CSV for row count:', error);
-              globalCSVRowCount = 0;
-              reject(error);
-            }
-          };
-          reader.onerror = function(error) {
-            console.error('Error reading file for row count:', error);
-            globalCSVRowCount = 0;
-            reject(error);
-          };
-          reader.readAsText(file);
-        } catch (error) {
-          console.error('Failed to load CSV parser:', error);
-          globalCSVRowCount = 0;
-          reject(error);
-        }
-      });
-    }
-    
-    // Function to update status area with total records
-    function updateTotalRecordsDisplay(rowCount) {
-      const actionStatusText = document.getElementById('actionStatusText');
-      if (actionStatusText) {
-        actionStatusText.textContent = `Total Records: ${rowCount}`;
-      }
-    }
-    
-    // Function to clear total records display
-    function clearTotalRecordsDisplay() {
-      const actionStatusText = document.getElementById('actionStatusText');
-      if (actionStatusText) {
-        actionStatusText.textContent = '';
-      }
-    }
-
-    // Function to create a custom file input that persists selection
-    function createCustomFileInput() {
-      const csvFileInput = document.getElementById('csvFile');
-      
-      // Check if the element exists
-      if (!csvFileInput) {
-        console.warn('CSV file input element not found');
-        return null;
-      }
-      
-      const fileInputContainer = csvFileInput.parentElement;
-      
-      // Check if parent element exists
-      if (!fileInputContainer) {
-        console.warn('CSV file input parent element not found');
-        return null;
-      }
-      
-      // Create custom file input wrapper
-      const customFileInput = document.createElement('div');
-      customFileInput.className = 'custom-file-input';
-      customFileInput.style.cssText = `
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        margin-bottom: 10px;
-      `;
-      
-      // Create the actual file input (hidden)
-      const hiddenFileInput = document.createElement('input');
-      hiddenFileInput.type = 'file';
-      hiddenFileInput.accept = '.csv';
-      hiddenFileInput.id = 'csvFileInput';
-      hiddenFileInput.name = 'csvFile';
-      hiddenFileInput.style.display = 'none';
-      
-      // Create custom button
-      const customButton = document.createElement('button');
-      customButton.type = 'button';
-      customButton.className = 'button button-secondary';
-      customButton.textContent = 'Choose File';
-      customButton.style.cssText = `
-        white-space: nowrap;
-        min-width: 120px;
-      `;
-      
-      // Create file name display
-      const fileNameDisplay = document.createElement('span');
-      fileNameDisplay.id = 'customFileNameDisplay';
-      fileNameDisplay.style.cssText = `
-        color: #6b7280;
-        font-style: italic;
-        flex: 1;
-      `;
-      fileNameDisplay.textContent = 'No file chosen';
-      
-      // Create clear button
-      const clearButton = document.createElement('button');
-      clearButton.type = 'button';
-      clearButton.className = 'button button-light button-sm';
-      clearButton.textContent = 'Clear';
-      clearButton.style.display = 'none';
-      
-      // Add event listeners
-      customButton.addEventListener('click', () => {
-        hiddenFileInput.click();
-      });
-      
-      hiddenFileInput.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (file) {
-          fileNameDisplay.textContent = file.name;
-          fileNameDisplay.style.color = '#e60028';
-          fileNameDisplay.style.fontStyle = 'normal';
-          clearButton.style.display = 'inline-block';
-          
-          // Save to localStorage
-          localStorage.setItem('lastSelectedFileName', file.name);
-          
-          // Update other displays
-          updateFileDisplays(file.name);
-          
-          // Count CSV rows
-          countCSVRows(file);
-        }
-      });
-      
-      clearButton.addEventListener('click', () => {
-        hiddenFileInput.value = '';
-        fileNameDisplay.textContent = 'No file chosen';
-        fileNameDisplay.style.color = '#6b7280';
-        fileNameDisplay.style.fontStyle = 'italic';
-        clearButton.style.display = 'none';
-        
-        // Clear localStorage
-        localStorage.removeItem('lastSelectedFileName');
-        
-        // Clear other displays
-        clearFileDisplays();
-      });
-      
-      // Assemble the custom input
-      customFileInput.appendChild(customButton);
-      customFileInput.appendChild(fileNameDisplay);
-      customFileInput.appendChild(clearButton);
-      
-      // Replace the original input
-      fileInputContainer.replaceChild(customFileInput, csvFileInput);
-      fileInputContainer.appendChild(hiddenFileInput);
-      
-      // Restore saved file name
-      restoreSavedFileName();
-      
-      return hiddenFileInput;
-    }
-    
-    // Function to restore saved file name
-    function restoreSavedFileName() {
-      const fileNameDisplay = document.getElementById('customFileNameDisplay');
-      const clearButton = document.querySelector('.custom-file-input .button-light');
-      
-      // Check for saved file name
-      const savedFileName = localStorage.getItem('lastSelectedFileName');
-      if (savedFileName && fileNameDisplay) {
-        fileNameDisplay.textContent = savedFileName;
-        fileNameDisplay.style.color = '#e60028';
-        fileNameDisplay.style.fontStyle = 'normal';
-        if (clearButton) {
-          clearButton.style.display = 'inline-block';
-        }
-        
-        // Update other displays
-        updateFileDisplays(savedFileName);
-      }
-    }
-    
-    // Function to update all file displays
-    function updateFileDisplays(fileName) {
-      // Update main page displays
-      const selectedFileNameDisplay = document.getElementById('selectedFileNameDisplay');
-      const selectedFileNameText = document.getElementById('selectedFileNameText');
-      const headerFileName = document.getElementById('headerFileName');
-      
-      if (selectedFileNameDisplay && selectedFileNameText) {
-        selectedFileNameText.innerHTML = `<strong>Selected:</strong> <span style="color:#e60028;">${fileName}</span>`;
-        selectedFileNameDisplay.style.display = 'block';
-      }
-      
-      if (headerFileName) {
-        headerFileName.textContent = fileName;
-      }
-    }
-    
-    // Function to clear all file displays
-    function clearFileDisplays() {
-      const selectedFileNameDisplay = document.getElementById('selectedFileNameDisplay');
-      const headerFileName = document.getElementById('headerFileName');
-      
-      if (selectedFileNameDisplay) {
-        selectedFileNameDisplay.style.display = 'none';
-      }
-      
-      if (headerFileName) {
-        headerFileName.textContent = 'file with users and extension of .csv file';
-      }
-      
-      clearTotalRecordsDisplay();
-    }
-    
-    // Function to get the current file input element (handles both custom and standard inputs)
-    function getCurrentFileInput() {
-      // First try to get the hidden file input from our custom implementation
-      let fileInput = document.getElementById('csvFileInput');
-      
-      // If not found, try the original input
-      if (!fileInput) {
-        fileInput = document.getElementById('csvFile');
-      }
-      
-      return fileInput;
-    }
-    
-    // Function to check if we have a valid file selected
-    function hasValidFileSelected() {
-      const fileInput = getCurrentFileInput();
-      return fileInput && fileInput.files && fileInput.files.length > 0;
-    }
-    
-    // Function to get the selected file
-    function getSelectedFile() {
-      const fileInput = getCurrentFileInput();
-      if (fileInput && fileInput.files && fileInput.files.length > 0) {
-        return fileInput.files[0];
-      }
-      return null;
-    }
-    
-    // Function to show a message when user needs to reselect file
-    function showFileReselectionMessage() {
-      const savedFileName = localStorage.getItem('lastSelectedFileName');
-      if (savedFileName && !hasValidFileSelected()) {
-        // Show a message to the user that they need to reselect the file
-        const statusBox = document.getElementById('statusBox');
-        if (statusBox) {
-          statusBox.innerHTML = `
-            <div class="alert alert-warning">
-              <strong>File Selection Required</strong><br>
-              You have a saved file name (${savedFileName}) but the actual file is not selected.<br>
-              Please click "Choose File" to reselect your CSV file.
-            </div>
-          `;
-        }
-        return true;
-      }
-      return false;
-    }
-    
-    // Function to manually retry Papa Parse loading
-    async function retryPapaParseLoading() {
-      console.log('🔄 Manually retrying Papa Parse loading...');
-      
-      const statusBox = document.getElementById('statusBox');
-      if (statusBox) {
-        statusBox.innerHTML = `
-          <div class="alert alert-info">
-            <strong>Loading Papa Parse...</strong><br>
-            Attempting to load the CSV parsing library...<br>
-            <small>Please wait...</small>
-          </div>
-        `;
-      }
-      
-      try {
-        await ensureCSVParserLoaded();
-        console.log('✅ Papa Parse loaded successfully on manual retry');
-        
-        // Clear the status
-        if (statusBox) {
-          statusBox.innerHTML = '';
-        }
-        
-        // Re-count rows if a file is selected
-        const file = getSelectedFile();
-        if (file) {
-          const rowCount = await countCSVRows(file);
-          updateTotalRecordsDisplay(rowCount);
-        }
-        
-        return true;
-      } catch (error) {
-        console.error('❌ Manual Papa Parse retry failed:', error);
-        
-        if (statusBox) {
-          statusBox.innerHTML = `
-            <div class="alert alert-danger">
-              <strong>Library Loading Failed</strong><br>
-              Papa Parse library failed to load: ${error.message}<br>
-              <button onclick="retryPapaParseLoading()" class="button button-sm button-secondary">Retry Loading</button>
-              <small>If the issue persists, please check your internet connection and refresh the page.</small>
-            </div>
-          `;
-        }
-        
-        return false;
-      }
-    }
-    
-    // Consolidated DOMContentLoaded listener - all initialization logic in one place
-    document.addEventListener('DOMContentLoaded', function() {
-      console.log('🚀 Initializing PingOne User Management Application...');
-      
-      // Initialize library loading monitor
-      console.log('🔍 Library Loading Monitor initialized');
-      
-      // Check for already loaded libraries
-      setTimeout(() => {
-        if (typeof uDSV !== 'undefined') {
-          window.libraryLogger.logLibraryLoad('uDSV', Date.now(), 'head_script');
-        }
-        if (typeof tippy !== 'undefined') {
-          window.libraryLogger.logLibraryLoad('Tippy.js', Date.now(), 'head_script');
-        }
-        if (typeof Popper !== 'undefined') {
-          window.libraryLogger.logLibraryLoad('Popper.js', Date.now(), 'head_script');
-        }
-      }, 100);
-      
-      // Initialize unified popup
-      if (typeof UnifiedPopup !== 'undefined') {
-        unifiedPopup = new UnifiedPopup();
-      }
-      
-      // Initialize form persistence and token management
-      if (typeof FormPersistence !== 'undefined') {
-        formPersistence = new FormPersistence();
-      }
-      if (typeof TokenManager !== 'undefined') {
-        tokenManager = new TokenManager();
-      }
-      
-      // Initialize credential status
-      validateCredentials();
-      
-      // Initialize custom file input
-      const customFileInput = createCustomFileInput();
-      if (!customFileInput) {
-        console.warn('Custom file input initialization failed, using standard file input');
-      }
-      
-      // Initialize tooltip system
-      if (typeof tippy !== 'undefined') {
-        tippy('[data-tippy-content]', {
-          theme: 'pingone',
-          placement: 'top',
-          arrow: true,
-          animation: 'shift-away',
-          duration: [200, 150],
-          delay: [0, 0],
-          interactive: false,
-          allowHTML: true,
-          maxWidth: 260,
-          offset: [0, 8],
-          trigger: 'mouseenter focus',
-          touch: ['hold', 500],
-        });
-      }
-      
-      // Initialize all event listeners with null checks
-      initializeEventListeners();
-      
-      // Load saved file name and show reselection message
-      loadSavedFileName();
-      showFileReselectionMessage();
-      
-      console.log('✅ Application initialization complete');
-    });
-    
-    // Helper function to initialize all event listeners with null checks
-    function initializeEventListeners() {
-      // Credential error modal listeners
-      const closeBtn = document.getElementById('closeCredentialErrorModal');
-      const okBtn = document.getElementById('dismissCredentialError');
-      const moreInfoBtn = document.getElementById('toggleTroubleshooting');
-      const modal = document.getElementById('credentialErrorModal');
-      
-      if (closeBtn) closeBtn.addEventListener('click', hideCredentialErrorModal);
-      if (okBtn) okBtn.addEventListener('click', hideCredentialErrorModal);
-      if (moreInfoBtn) moreInfoBtn.addEventListener('click', toggleTroubleshooting);
-      if (modal) {
-        modal.addEventListener('click', function(event) {
-          if (event.target === modal) hideCredentialErrorModal();
-        });
-      }
-      
-      // Clear file button
-      const clearFileBtn = document.getElementById('clearFileBtn');
-      if (clearFileBtn) {
-        clearFileBtn.addEventListener('click', function() {
-          const csvFileInput = document.getElementById('csvFile');
-          const selectedFileNameDisplay = document.getElementById('selectedFileNameDisplay');
-          const headerFileName = document.getElementById('headerFileName');
-          const saveFileNameCheckbox = document.getElementById('saveFileNameCheckbox');
-          
-          if (csvFileInput) csvFileInput.value = '';
-          if (selectedFileNameDisplay) selectedFileNameDisplay.style.display = 'none';
-          if (headerFileName) headerFileName.textContent = 'file with users and extension of .csv file';
-          
-          localStorage.removeItem('pingone_default_csv_file');
-          localStorage.removeItem('pingone_default_csv_content');
-          sessionStorage.removeItem('temp_csv_file_name');
-          
-          if (saveFileNameCheckbox) {
-            saveFileNameCheckbox.checked = false;
-            localStorage.removeItem('pingone_save_file_name');
-          }
-          
-          clearTotalRecordsDisplay();
-          globalCSVRowCount = 0;
-          
-          window.dispatchEvent(new StorageEvent('storage', {
-            key: 'pingone_default_csv_file',
-            newValue: null,
-            oldValue: localStorage.getItem('pingone_default_csv_file')
-          }));
-        });
-      }
-      
-      // File input listeners
-      const csvFileInput = document.getElementById('csvFile');
-      const saveFileNameCheckbox = document.getElementById('saveFileNameCheckbox');
-      
-      if (csvFileInput) {
-        csvFileInput.addEventListener('change', handleFileSelection);
-        csvFileInput.addEventListener('input', function() {
-          if (!this.files || this.files.length === 0) {
-            handleFileSelection();
-          }
-        });
-      }
-      
-      if (saveFileNameCheckbox) {
-        saveFileNameCheckbox.addEventListener('change', handleSaveCheckboxChange);
-      }
-    }
-
-    // Function to ensure uDSV CSV parser is loaded
-    function ensureCSVParserLoaded() {
-      return new Promise((resolve, reject) => {
-        // Check if uDSV is already loaded
-        if (typeof uDSV !== 'undefined') {
-          console.log('✅ uDSV CSV parser is already loaded');
-          resolve();
-          return;
-        }
-        
-        // Wait for uDSV to load
-        let attempts = 0;
-        const maxAttempts = 100; // 10 seconds max wait
-        
-        const checkuDSV = () => {
-          attempts++;
-          
-          if (typeof uDSV !== 'undefined') {
-            console.log('✅ uDSV loaded after waiting');
-            resolve();
-            return;
-          }
-          
-          if (attempts >= maxAttempts) {
-            console.error('❌ uDSV failed to load after 10 seconds');
-            reject(new Error('uDSV CSV parser failed to load'));
-            return;
-          }
-          
-          setTimeout(checkuDSV, 100);
-        };
-        
-        checkuDSV();
-      });
-    }
   </script>
-  
-  <!-- Unified Popup System -->
-  <div id="unifiedPopup" style="
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.6);
-    z-index: 10000;
-    backdrop-filter: blur(2px);
-  ">
-    <div style="
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: #f8f9fa;
-      border: 1px solid #000;
-      border-radius: 12px;
-      padding: 0;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-      max-width: 500px;
-      width: 90%;
-      max-height: 90vh;
-      overflow-y: auto;
-    ">
-      <!-- Header -->
-      <div style="
-        background: #e9ecef;
-        color: #212529;
-        padding: 1.5rem 2rem 1rem 2rem;
-        border-radius: 12px 12px 0 0;
-        position: relative;
-        border-bottom: 1px solid #000;
-      ">
-        <button id="closeUnifiedPopup" style="
-          position: absolute;
-          top: 1rem;
-          right: 1.5rem;
-          background: none;
-          border: none;
-          color: #212529;
-          font-size: 1.5rem;
-          cursor: pointer;
-          padding: 0;
-          width: 30px;
-          height: 30px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          border-radius: 50%;
-          transition: background-color 0.2s;
-        " onmouseover="this.style.backgroundColor='rgba(0,0,0,0.1)'" onmouseout="this.style.backgroundColor='transparent'">✖</button>
-        <h2 id="popupTitle" style="
-          margin: 0;
-          color: #212529;
-          font-size: 1.5rem;
-          font-weight: 600;
-        ">Popup Title</h2>
-      </div>
-      
-      <!-- Body -->
-      <div style="padding: 2rem;">
-        <div id="popupContent" style="
-          color: #212529;
-          line-height: 1.6;
-          margin-bottom: 1.5rem;
-        ">
-          <!-- Content will be populated dynamically -->
-        </div>
-        
-        <!-- Buttons -->
-        <div id="popupButtons" style="
-          display: flex;
-          gap: 1rem;
-          justify-content: flex-end;
-        ">
-          <!-- Buttons will be populated dynamically -->
-        </div>
-      </div>
-    </div>
-  </div>
 </body>
 </html>
