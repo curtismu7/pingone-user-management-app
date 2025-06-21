@@ -2291,6 +2291,13 @@
       // Initialize the token management system
       settingsTokenManager = new SettingsTokenManager();
       
+      // Define credential input elements and checkboxes
+      const envIdInput = document.getElementById('settingsEnvId');
+      const clientIdInput = document.getElementById('settingsClientId');
+      const clientSecretInput = document.getElementById('settingsClientSecret');
+      const rememberSecretCheckbox = document.getElementById('settingsRememberClientSecret');
+      const saveAllCredentialsCheckbox = document.getElementById('settingsSaveAllCredentials');
+      
       console.log('Settings page loaded. Checking for default file in localStorage...');
       const savedDefaultFileForDebugging = localStorage.getItem('default_csv_file');
       console.log('Value of "default_csv_file" in localStorage:', savedDefaultFileForDebugging);
