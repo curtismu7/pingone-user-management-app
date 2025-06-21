@@ -2285,6 +2285,21 @@
     
     // Prefill settings from localStorage and handle new credential UI logic
     window.addEventListener('DOMContentLoaded', function () {
+      // Check if Papa Parse is available
+      if (typeof Papa === 'undefined') {
+        console.warn('Papa Parse library not loaded. CSV parsing functionality may not work properly.');
+        // Try to load Papa Parse dynamically if it's not available
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.5.3/papaparse.min.js';
+        script.onload = function() {
+          console.log('Papa Parse loaded dynamically');
+        };
+        script.onerror = function() {
+          console.error('Failed to load Papa Parse dynamically');
+        };
+        document.head.appendChild(script);
+      }
+      
       // Initialize the comprehensive form persistence system
       settingsFormPersistence = new SettingsFormPersistence();
       
@@ -3410,6 +3425,13 @@
       return new Promise((resolve, reject) => {
         if (!file) {
           resolve(0);
+          return;
+        }
+        
+        // Check if Papa Parse is available
+        if (typeof Papa === 'undefined') {
+          console.warn('Papa Parse library not loaded, cannot count CSV rows');
+          resolve(0); // Return 0 as fallback
           return;
         }
         
