@@ -12,7 +12,83 @@
   <script src="https://unpkg.com/@popperjs/core@2"></script>
   <script src="https://unpkg.com/tippy.js@6"></script>
   <!-- Add PapaParse for CSV parsing -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.5.3/papaparse.min.js" async onerror="console.error('❌ Failed to load Papa Parse from CDN')"></script>
+  <script src="assets/uDSV.iife.min.js"></script>
+  <script>
+    // Initialize uDSV as the primary CSV parser
+    if (typeof uDSV !== 'undefined') {
+      console.log('uDSV CSV parser loaded successfully');
+      // Make uDSV globally available as Papa for compatibility
+      window.Papa = {
+        parse: function(csvString, config) {
+          try {
+            const result = uDSV.parse(csvString, {
+              header: config && config.header !== false,
+              skipEmptyLines: config && config.skipEmptyLines,
+              delimiter: config && config.delimiter || ',',
+              transform: config && config.transform,
+              transformHeader: config && config.transformHeader
+            });
+            
+            return {
+              data: result.data || [],
+              errors: result.errors || [],
+              meta: {
+                delimiter: result.delimiter || ',',
+                linebreak: '\n',
+                aborted: false,
+                fields: result.headers || [],
+                truncated: false
+              }
+            };
+          } catch (error) {
+            return {
+              data: [],
+              errors: [{
+                type: 'ParseError',
+                code: 'ParseError',
+                message: error.message,
+                row: 0
+              }],
+              meta: {
+                delimiter: ',',
+                linebreak: '\n',
+                aborted: false,
+                fields: [],
+                truncated: false
+              }
+            };
+          }
+        },
+        unparse: function(data, config) {
+          try {
+            return uDSV.stringify(data, {
+              header: config && config.header !== false,
+              delimiter: config && config.delimiter || ',',
+              quoteChar: config && config.quoteChar || '"',
+              escapeChar: config && config.escapeChar || '"'
+            });
+          } catch (error) {
+            console.error('uDSV unparse error:', error);
+            return '';
+          }
+        }
+      };
+      window.libraryLogger.logLibraryLoad('uDSV', Date.now(), 'head_script');
+    } else {
+      console.warn('uDSV not available, falling back to Papa Parse CDN');
+      // Fallback to Papa Parse CDN
+      const script = document.createElement('script');
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.5.3/papaparse.min.js';
+      script.onload = function() {
+        console.log('Papa Parse loaded from CDN fallback');
+        window.libraryLogger.logLibraryLoad('PapaParse', Date.now(), 'fallback_script');
+      };
+      script.onerror = function() {
+        console.error('Failed to load both uDSV and Papa Parse');
+      };
+      document.head.appendChild(script);
+    }
+  </script>
   
   <!-- Library Loading Logger -->
   <script>
@@ -102,7 +178,12 @@
       
       // Check for already loaded libraries
       setTimeout(() => {
-        // Check Papa Parse
+        // Check uDSV (our primary CSV parser)
+        if (typeof uDSV !== 'undefined') {
+          window.libraryLogger.logLibraryLoad('uDSV', Date.now(), 'head_script');
+        }
+        
+        // Check Papa Parse (fallback)
         if (typeof Papa !== 'undefined' && Papa.parse) {
           window.libraryLogger.logLibraryLoad('PapaParse', Date.now(), 'head_script');
         }
@@ -150,7 +231,8 @@
         
         element.onload = function(event) {
           const scriptSrc = element.src || 'inline_script';
-          const libraryName = scriptSrc.includes('papaparse') ? 'PapaParse' :
+          const libraryName = scriptSrc.includes('udsv') ? 'uDSV' :
+                             scriptSrc.includes('papaparse') ? 'PapaParse' :
                              scriptSrc.includes('tippy') ? 'Tippy.js' :
                              scriptSrc.includes('popper') ? 'Popper.js' :
                              scriptSrc.split('/').pop().replace('.js', '') || 'Unknown';
@@ -164,7 +246,8 @@
         
         element.onerror = function(event) {
           const scriptSrc = element.src || 'inline_script';
-          const libraryName = scriptSrc.includes('papaparse') ? 'PapaParse' :
+          const libraryName = scriptSrc.includes('udsv') ? 'uDSV' :
+                             scriptSrc.includes('papaparse') ? 'PapaParse' :
                              scriptSrc.includes('tippy') ? 'Tippy.js' :
                              scriptSrc.includes('popper') ? 'Popper.js' :
                              scriptSrc.split('/').pop().replace('.js', '') || 'Unknown';
@@ -1596,9 +1679,10 @@
     
     // Initialize unified popup
     let unifiedPopup;
-    document.addEventListener('DOMContentLoaded', () => {
-      unifiedPopup = new UnifiedPopup();
-    });
+    // DOMContentLoaded listener consolidated below
+    // document.addEventListener('DOMContentLoaded', () => {
+    //   unifiedPopup = new UnifiedPopup();
+    // });
 
     // Comprehensive Token Management System
     class TokenManager {
@@ -2041,17 +2125,32 @@
     
     // Function to test credentials
     async function testCredentials() {
-      if (tokenManager) {
-        return await tokenManager.forceValidation();
+      if (settingsTokenManager) {
+        return await settingsTokenManager.forceValidation();
       }
       
       // Fallback to old method if token manager not available
       const testBtn = document.getElementById('testCredentialsBtn');
       const statusSpan = document.getElementById('credentialsStatus');
       
-      const environmentId = document.getElementById('envIdInput').value;
-      const clientId = document.getElementById('clientIdInput').value;
-      const clientSecret = document.getElementById('clientSecretInput').value;
+      // Add null checks for DOM elements
+      if (!testBtn || !statusSpan) {
+        console.error('Required DOM elements not found for credential testing');
+        return;
+      }
+      
+      const envIdInput = document.getElementById('envIdInput');
+      const clientIdInput = document.getElementById('clientIdInput');
+      const clientSecretInput = document.getElementById('clientSecretInput');
+      
+      if (!envIdInput || !clientIdInput || !clientSecretInput) {
+        console.error('Credential input elements not found');
+        return;
+      }
+      
+      const environmentId = envIdInput.value;
+      const clientId = clientIdInput.value;
+      const clientSecret = clientSecretInput.value;
       
       if (!environmentId || !clientId || !clientSecret) {
         statusSpan.textContent = '❌ Please fill in all credential fields (Environment ID, Client ID, and Client Secret) before testing your connection to PingOne.';
@@ -2130,22 +2229,36 @@
     
     // Function to load test credentials
     function loadTestCredentials() {
-      document.getElementById('envIdInput').value = '7853c888-ad7d-470c-add6-597397698767';
-      document.getElementById('clientIdInput').value = '83b39696-7c9d-4012-b9b2-8b4bfc9327ac';
-      document.getElementById('clientSecretInput').value = '4xdT108XeW1c64I08sqQC2pJZA1-25kRsY1tRDXAnpGjAIztbtkPye_.9Xiqz6xf';
+      const envIdInput = document.getElementById('envIdInput');
+      const clientIdInput = document.getElementById('clientIdInput');
+      const clientSecretInput = document.getElementById('clientSecretInput');
+      
+      if (!envIdInput || !clientIdInput || !clientSecretInput) {
+        console.error('Credential input elements not found');
+        return;
+      }
+      
+      envIdInput.value = '7853c888-ad7d-470c-add6-597397698767';
+      clientIdInput.value = '83b39696-7c9d-4012-b9b2-8b4bfc9327ac';
+      clientSecretInput.value = '4xdT108XeW1c64I08sqQC2pJZA1-25kRsY1tRDXAnpGjAIztbtkPye_.9Xiqz6xf';
       
       // Save to localStorage if saveAllCredentials is checked
       const saveAllBox = document.getElementById('saveAllCredentials');
       if (saveAllBox && saveAllBox.checked) {
-        localStorage.setItem('envId', document.getElementById('envIdInput').value);
-        localStorage.setItem('clientId', document.getElementById('clientIdInput').value);
-        localStorage.setItem('clientSecret', document.getElementById('clientSecretInput').value);
+        localStorage.setItem('envId', envIdInput.value);
+        localStorage.setItem('clientId', clientIdInput.value);
+        localStorage.setItem('clientSecret', clientSecretInput.value);
       }
     }
     
     // Helper function to show dynamic action summary
     function showActionSummary(action, successCount, skippedCount = 0, errorCount = 0) {
       const statusSpan = document.getElementById('credentialsStatusText');
+      
+      if (!statusSpan) {
+        console.warn('credentialsStatusText element not found');
+        return;
+      }
       
       if (errorCount > 0) {
         // Red version for errors/partial success
@@ -2168,6 +2281,22 @@
       const importBtn = document.getElementById('importUsersBtn');
       const csvFileInput = document.getElementById('csvFile');
       let statusSpan = document.getElementById('actionStatusText');
+      
+      // Add null checks for required elements
+      if (!importBtn) {
+        console.error('Import button not found');
+        return;
+      }
+      
+      if (!csvFileInput) {
+        console.error('CSV file input element not found');
+        if (typeof unifiedPopup !== 'undefined') {
+          unifiedPopup.alert('CSV file input not found. Please refresh the page.', 'System Error');
+        } else {
+          alert('CSV file input not found. Please refresh the page.');
+        }
+        return;
+      }
       
       // Fallback to credentialsStatusText if actionStatusText is not found
       if (!statusSpan) {
@@ -2518,82 +2647,83 @@
     // Removed - credentials are now managed in settings page only
 
     // Preload credentials from localStorage on page load
-    window.addEventListener('DOMContentLoaded', function() {
-      // Initialize the comprehensive form persistence system
-      formPersistence = new FormPersistence();
-      
-      // Initialize the token management system
-      tokenManager = new TokenManager();
-      
-      // Initialize credential status
-      validateCredentials();
-      
-      // Initialize custom file input for persistence
-      const customFileInput = createCustomFileInput();
-      if (!customFileInput) {
-        console.warn('Custom file input initialization failed, using standard file input');
-      }
-      
-      // Setup clear file button functionality
-      const clearFileBtn = document.getElementById('clearFileBtn');
-      if (clearFileBtn) {
-        clearFileBtn.addEventListener('click', function() {
-          const csvFileInput = document.getElementById('csvFile');
-          const selectedFileNameDisplay = document.getElementById('selectedFileNameDisplay');
-          const headerFileName = document.getElementById('headerFileName');
-          const saveFileNameCheckbox = document.getElementById('saveFileNameCheckbox');
-
-          if (csvFileInput) {
-            csvFileInput.value = '';
-          }
-          if (selectedFileNameDisplay) {
-            selectedFileNameDisplay.style.display = 'none';
-          }
-          if (headerFileName) {
-            headerFileName.textContent = 'file with users and extension of .csv file';
-          }
-          
-          // Clear storage using the new keys
-          localStorage.removeItem('pingone_default_csv_file');
-          sessionStorage.removeItem('temp_csv_file_name');
-          
-          // Clear total records display
-          clearTotalRecordsDisplay();
-          globalCSVRowCount = 0;
-          
-          if (saveFileNameCheckbox) {
-            saveFileNameCheckbox.checked = false;
-            localStorage.removeItem('pingone_save_file_name');
-          }
-        });
-      }
-      
-      // Setup modal close button
-      const closeCredentialErrorModalBtn = document.getElementById('closeCredentialErrorModal');
-      if (closeCredentialErrorModalBtn) {
-        closeCredentialErrorModalBtn.addEventListener('click', closeCredentialErrorModal);
-      }
-      
-      // Close modal when clicking outside
-      const credentialErrorModal = document.getElementById('credentialErrorModal');
-      if (credentialErrorModal) {
-        credentialErrorModal.addEventListener('click', function(event) {
-          if (event.target === credentialErrorModal) {
-            closeCredentialErrorModal();
-          }
-        });
-      }
-      
-      // Initialize tippy.js tooltips
-      tippy('[data-tippy-content]', {
-        theme: 'pingone',
-        placement: 'top',
-        arrow: true,
-        duration: [200, 150],
-        maxWidth: 260,
-        minWidth: 140
-      });
-    });
+    // DOMContentLoaded listener consolidated below
+    // window.addEventListener('DOMContentLoaded', function() {
+    //   // Initialize the comprehensive form persistence system
+    //   formPersistence = new FormPersistence();
+    //   
+    //   // Initialize the token management system
+    //   tokenManager = new TokenManager();
+    //   
+    //   // Initialize credential status
+    //   validateCredentials();
+    //   
+    //   // Initialize custom file input for persistence
+    //   const customFileInput = createCustomFileInput();
+    //   if (!customFileInput) {
+    //     console.warn('Custom file input initialization failed, using standard file input');
+    //   }
+    //   
+    //   // Setup clear file button functionality
+    //   const clearFileBtn = document.getElementById('clearFileBtn');
+    //   if (clearFileBtn) {
+    //     clearFileBtn.addEventListener('click', function() {
+    //       const csvFileInput = document.getElementById('csvFile');
+    //       const selectedFileNameDisplay = document.getElementById('selectedFileNameDisplay');
+    //       const headerFileName = document.getElementById('headerFileName');
+    //       const saveFileNameCheckbox = document.getElementById('saveFileNameCheckbox');
+    //
+    //       if (csvFileInput) {
+    //         csvFileInput.value = '';
+    //       }
+    //       if (selectedFileNameDisplay) {
+    //         selectedFileNameDisplay.style.display = 'none';
+    //       }
+    //       if (headerFileName) {
+    //         headerFileName.textContent = 'file with users and extension of .csv file';
+    //       }
+    //       
+    //       // Clear storage using the new keys
+    //       localStorage.removeItem('pingone_default_csv_file');
+    //       sessionStorage.removeItem('temp_csv_file_name');
+    //       
+    //       // Clear total records display
+    //       clearTotalRecordsDisplay();
+    //       globalCSVRowCount = 0;
+    //       
+    //       if (saveFileNameCheckbox) {
+    //         saveFileNameCheckbox.checked = false;
+    //         localStorage.removeItem('pingone_save_file_name');
+    //       }
+    //     });
+    //   }
+    //   
+    //   // Setup modal close button
+    //   const closeCredentialErrorModalBtn = document.getElementById('closeCredentialErrorModal');
+    //   if (closeCredentialErrorModalBtn) {
+    //     closeCredentialErrorModalBtn.addEventListener('click', closeCredentialErrorModal);
+    //   }
+    //   
+    //   // Close modal when clicking outside
+    //   const credentialErrorModal = document.getElementById('credentialErrorModal');
+    //   if (credentialErrorModal) {
+    //     credentialErrorModal.addEventListener('click', function(event) {
+    //       if (event.target === credentialErrorModal) {
+    //         closeCredentialErrorModal();
+    //       }
+    //     });
+    //   }
+    //   
+    //   // Initialize tippy.js tooltips
+    //   tippy('[data-tippy-content]', {
+    //     theme: 'pingone',
+    //     placement: 'top',
+    //     arrow: true,
+    //     duration: [200, 150],
+    //     maxWidth: 260,
+    //     minWidth: 140
+    //   });
+    // });
 
     // File name persistence and sharing functions
     function setupFileNamePersistence() {
@@ -3795,8 +3925,8 @@
         }
         
         try {
-          // Ensure Papa Parse is loaded
-          await ensurePapaParseLoaded();
+          // Ensure CSV parser is loaded
+          await ensureCSVParserLoaded();
           
           Papa.parse(file, {
             header: true, // Treat first row as header
@@ -3813,7 +3943,7 @@
             }
           });
         } catch (error) {
-          console.error('Failed to load Papa Parse:', error);
+          console.error('Failed to load CSV parser:', error);
           globalCSVRowCount = 0;
           reject(error);
         }
@@ -4069,7 +4199,7 @@
       }
       
       try {
-        await ensurePapaParseLoaded();
+        await ensureCSVParserLoaded();
         console.log('✅ Papa Parse loaded successfully on manual retry');
         
         // Clear the status
@@ -4103,99 +4233,146 @@
       }
     }
     
-    // Initialize everything when DOM is loaded
-    document.addEventListener('DOMContentLoaded', async function() {
+    // Consolidated DOMContentLoaded listener - all initialization logic in one place
+    document.addEventListener('DOMContentLoaded', function() {
       console.log('🚀 Initializing PingOne User Management Application...');
       
-      try {
-        // Try to ensure Papa Parse is loaded, but don't fail the entire app if it doesn't
-        try {
-          await ensurePapaParseLoaded();
-          console.log('✅ Papa Parse initialization complete');
-        } catch (papaError) {
-          console.warn('⚠️ Papa Parse failed to load, but continuing with application initialization');
-          console.warn('📝 CSV functionality will be limited until Papa Parse loads');
+      // Initialize library loading monitor
+      console.log('🔍 Library Loading Monitor initialized');
+      
+      // Check for already loaded libraries
+      setTimeout(() => {
+        if (typeof uDSV !== 'undefined') {
+          window.libraryLogger.logLibraryLoad('uDSV', Date.now(), 'head_script');
+        }
+        if (typeof Papa !== 'undefined' && Papa.parse) {
+          window.libraryLogger.logLibraryLoad('PapaParse', Date.now(), 'head_script');
+        }
+        if (typeof tippy !== 'undefined') {
+          window.libraryLogger.logLibraryLoad('Tippy.js', Date.now(), 'head_script');
+        }
+        if (typeof Popper !== 'undefined') {
+          window.libraryLogger.logLibraryLoad('Popper.js', Date.now(), 'head_script');
+        }
+      }, 100);
+      
+      // Initialize unified popup
+      if (typeof UnifiedPopup !== 'undefined') {
+        unifiedPopup = new UnifiedPopup();
+      }
+      
+      // Initialize form persistence and token management
+      if (typeof FormPersistence !== 'undefined') {
+        formPersistence = new FormPersistence();
+      }
+      if (typeof TokenManager !== 'undefined') {
+        tokenManager = new TokenManager();
+      }
+      
+      // Initialize credential status
+      validateCredentials();
+      
+      // Initialize custom file input
+      const customFileInput = createCustomFileInput();
+      if (!customFileInput) {
+        console.warn('Custom file input initialization failed, using standard file input');
+      }
+      
+      // Initialize tooltip system
+      if (typeof tippy !== 'undefined') {
+        tippy('[data-tippy-content]', {
+          theme: 'pingone',
+          placement: 'top',
+          arrow: true,
+          animation: 'shift-away',
+          duration: [200, 150],
+          delay: [0, 0],
+          interactive: false,
+          allowHTML: true,
+          maxWidth: 260,
+          offset: [0, 8],
+          trigger: 'mouseenter focus',
+          touch: ['hold', 500],
+        });
+      }
+      
+      // Initialize all event listeners with null checks
+      initializeEventListeners();
+      
+      // Load saved file name and show reselection message
+      loadSavedFileName();
+      showFileReselectionMessage();
+      
+      console.log('✅ Application initialization complete');
+    });
+    
+    // Helper function to initialize all event listeners with null checks
+    function initializeEventListeners() {
+      // Credential error modal listeners
+      const closeBtn = document.getElementById('closeCredentialErrorModal');
+      const okBtn = document.getElementById('dismissCredentialError');
+      const moreInfoBtn = document.getElementById('toggleTroubleshooting');
+      const modal = document.getElementById('credentialErrorModal');
+      
+      if (closeBtn) closeBtn.addEventListener('click', hideCredentialErrorModal);
+      if (okBtn) okBtn.addEventListener('click', hideCredentialErrorModal);
+      if (moreInfoBtn) moreInfoBtn.addEventListener('click', toggleTroubleshooting);
+      if (modal) {
+        modal.addEventListener('click', function(event) {
+          if (event.target === modal) hideCredentialErrorModal();
+        });
+      }
+      
+      // Clear file button
+      const clearFileBtn = document.getElementById('clearFileBtn');
+      if (clearFileBtn) {
+        clearFileBtn.addEventListener('click', function() {
+          const csvFileInput = document.getElementById('csvFile');
+          const selectedFileNameDisplay = document.getElementById('selectedFileNameDisplay');
+          const headerFileName = document.getElementById('headerFileName');
+          const saveFileNameCheckbox = document.getElementById('saveFileNameCheckbox');
           
-          // Show a warning to the user
-          const statusBox = document.getElementById('statusBox');
-          if (statusBox) {
-            statusBox.innerHTML = `
-              <div class="alert alert-warning">
-                <strong>Library Loading Issue</strong><br>
-                Papa Parse library is still loading. CSV functionality may be limited.<br>
-                <button onclick="retryPapaParseLoading()" class="button button-sm button-secondary">Retry Loading</button>
-                <small>This usually resolves automatically. If the issue persists, please refresh the page.</small>
-              </div>
-            `;
+          if (csvFileInput) csvFileInput.value = '';
+          if (selectedFileNameDisplay) selectedFileNameDisplay.style.display = 'none';
+          if (headerFileName) headerFileName.textContent = 'file with users and extension of .csv file';
+          
+          localStorage.removeItem('pingone_default_csv_file');
+          localStorage.removeItem('pingone_default_csv_content');
+          sessionStorage.removeItem('temp_csv_file_name');
+          
+          if (saveFileNameCheckbox) {
+            saveFileNameCheckbox.checked = false;
+            localStorage.removeItem('pingone_save_file_name');
           }
           
-          // Continue trying to load Papa Parse in the background
-          setTimeout(async () => {
-            try {
-              await ensurePapaParseLoaded();
-              console.log('✅ Papa Parse loaded successfully in background');
-              
-              // Clear the warning
-              const statusBox = document.getElementById('statusBox');
-              if (statusBox && statusBox.innerHTML.includes('Library Loading Issue')) {
-                statusBox.innerHTML = '';
-              }
-            } catch (retryError) {
-              console.error('❌ Papa Parse still failed to load after retry:', retryError);
-            }
-          }, 2000);
-        }
-        
-        // Initialize file input handling
-        const csvFileInput = document.getElementById('csvFile');
-        if (csvFileInput) {
-          console.log('✅ CSV file input found and initialized');
+          clearTotalRecordsDisplay();
+          globalCSVRowCount = 0;
           
-          // Add event listener for file selection
-          csvFileInput.addEventListener('change', async function(e) {
-            const file = e.target.files[0];
-            if (file) {
-              console.log(`📁 File selected: ${file.name}`);
-              try {
-                // Only try to count rows if Papa Parse is available
-                if (typeof Papa !== 'undefined' && Papa.parse) {
-                  const rowCount = await countCSVRows(file);
-                  console.log(`📊 CSV row count: ${rowCount}`);
-                  updateTotalRecordsDisplay(rowCount);
-                } else {
-                  console.warn('⚠️ Papa Parse not available, skipping row count');
-                  updateTotalRecordsDisplay('Loading...');
-                }
-              } catch (error) {
-                console.error('❌ Error counting CSV rows:', error);
-                clearTotalRecordsDisplay();
-              }
-            }
-          });
-        } else {
-          console.warn('⚠️ CSV file input not found');
-        }
-        
-        // Check for saved file name and show reselection message if needed
-        showFileReselectionMessage();
-        
-        console.log('✅ Application initialization complete');
-      } catch (error) {
-        console.error('❌ Application initialization failed:', error);
-        
-        // Show error message to user
-        const statusBox = document.getElementById('statusBox');
-        if (statusBox) {
-          statusBox.innerHTML = `
-            <div class="alert alert-danger">
-              <strong>Application Error</strong><br>
-              Failed to initialize the application: ${error.message}<br>
-              <small>Please refresh the page and try again.</small>
-            </div>
-          `;
-        }
+          window.dispatchEvent(new StorageEvent('storage', {
+            key: 'pingone_default_csv_file',
+            newValue: null,
+            oldValue: localStorage.getItem('pingone_default_csv_file')
+          }));
+        });
       }
-    });
+      
+      // File input listeners
+      const csvFileInput = document.getElementById('csvFile');
+      const saveFileNameCheckbox = document.getElementById('saveFileNameCheckbox');
+      
+      if (csvFileInput) {
+        csvFileInput.addEventListener('change', handleFileSelection);
+        csvFileInput.addEventListener('input', function() {
+          if (!this.files || this.files.length === 0) {
+            handleFileSelection();
+          }
+        });
+      }
+      
+      if (saveFileNameCheckbox) {
+        saveFileNameCheckbox.addEventListener('change', handleSaveCheckboxChange);
+      }
+    }
   </script>
 </body>
 </html>
