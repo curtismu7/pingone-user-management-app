@@ -1032,7 +1032,37 @@
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
+    /* Custom tippy.js theme for PingOne */
+    .tippy-box[data-theme~='pingone'] {
+      background-color: #f2f2f2;
+      color: #22223b;
+      min-width: 140px;
+      max-width: 260px;
+      padding: 8px 12px;
+      font-size: 14px;
+      line-height: 1.6;
+      border-radius: 8px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.10);
+      border: 1px solid #e5e7eb;
+      text-align: left;
+    }
+    .tippy-box[data-theme~='pingone'][data-placement^='top'] > .tippy-arrow::before {
+      border-top-color: #f2f2f2;
+    }
+    .tippy-box[data-theme~='pingone'][data-placement^='bottom'] > .tippy-arrow::before {
+      border-bottom-color: #f2f2f2;
+    }
+    .tippy-box[data-theme~='pingone'][data-placement^='left'] > .tippy-arrow::before {
+      border-left-color: #f2f2f2;
+    }
+    .tippy-box[data-theme~='pingone'][data-placement^='right'] > .tippy-arrow::before {
+      border-right-color: #f2f2f2;
+    }
   </style>
+  <!-- Add tippy.js CDN -->
+  <link rel="stylesheet" href="https://unpkg.com/tippy.js@6/dist/tippy.css" />
+  <script src="https://unpkg.com/@popperjs/core@2"></script>
+  <script src="https://unpkg.com/tippy.js@6"></script>
 </head>
 <body style="display:flex;flex-direction:row;min-height:100vh;">
   <div class="sidebar">
@@ -1094,42 +1124,27 @@
             <div style="display:grid;grid-template-columns:220px 1fr 48px 48px;align-items:center;gap:0.5rem;width:100%;max-width:800px;margin-bottom:0.5rem;">
               <label for="settingsEnvId" style="font-size:1.05rem;display:flex;align-items:center;gap:0.3em;margin-bottom:0;">
                 Environment ID
-                <span class="custom-tooltip" data-tooltip="Enter your PingOne Environment ID UUID">
-                  <span class="tooltip-icon">i</span>
-                  <span class="tooltip-content">Enter your PingOne Environment ID UUID</span>
-                </span>
+                <span class="info-icon" data-tippy-content="Enter your PingOne Environment ID UUID"></span>
               </label>
-              <input type="text" id="settingsEnvId" placeholder="Enter Environment ID" class="enhanced-input"
-                style="padding:0.5rem;border-radius:6px;border:1px solid #cbd5e1;background:#f3f4f6;font-size:1rem;width:100%;max-width:420px;grid-column:2;" data-tooltip="Your PingOne Environment ID (e.g. 7853c888-ad7d-470c-add6-597397698767)" />
-              <button id="clearSettingsEnvIdBtn" type="button" class="button-tooltip" data-tooltip="Clear the Environment ID field"
-                style="background:#e5e7eb;color:#0033a0;border:none;border-radius:6px;padding:0.5rem 0.9rem;font-size:1.1rem;cursor:pointer;transition:background 0.2s;">&times;</button>
+              <input type="text" id="settingsEnvId" placeholder="Enter Environment ID" class="enhanced-input" data-tippy-content="Your PingOne Environment ID (e.g. 7853c888-ad7d-470c-add6-597397698767)" />
+              <button id="clearSettingsEnvIdBtn" type="button" class="button-tooltip" data-tippy-content="Clear the Environment ID field">&times;</button>
             </div>
             <div style="display:grid;grid-template-columns:220px 1fr 48px 48px;align-items:center;gap:0.5rem;width:100%;max-width:800px;margin-bottom:0.5rem;">
               <label for="settingsClientId" style="font-size:1.05rem;display:flex;align-items:center;gap:0.3em;margin-bottom:0;">
                 Client ID
-                <span class="custom-tooltip" data-tooltip="Enter your PingOne Worker App Client ID">
-                  <span class="tooltip-icon">i</span>
-                  <span class="tooltip-content">Enter your PingOne Worker App Client ID</span>
-                </span>
+                <span class="info-icon" data-tippy-content="Enter your PingOne Worker App Client ID"></span>
               </label>
-              <input type="text" id="settingsClientId" placeholder="Enter Client ID" class="enhanced-input"
-                style="padding:0.5rem;border-radius:6px;border:1px solid #cbd5e1;background:#f3f4f6;font-size:1rem;width:100%;max-width:420px;grid-column:2;" data-tooltip="Your PingOne Client ID from the worker application" />
-              <button id="clearSettingsClientIdBtn" type="button" class="button-tooltip" data-tooltip="Clear the Client ID field"
-                style="background:#e5e7eb;color:#0033a0;border:none;border-radius:6px;padding:0.5rem 0.9rem;font-size:1.1rem;cursor:pointer;transition:background 0.2s;">&times;</button>
+              <input type="text" id="settingsClientId" placeholder="Enter Client ID" class="enhanced-input" data-tippy-content="Your PingOne Client ID from the worker application" />
+              <button id="clearSettingsClientIdBtn" type="button" class="button-tooltip" data-tippy-content="Clear the Client ID field">&times;</button>
             </div>
             <div style="display:grid;grid-template-columns:220px 1fr 48px 48px;align-items:center;gap:0.5rem;width:100%;max-width:800px;margin-bottom:0.5rem;position:relative;">
               <label for="settingsClientSecret" style="font-size:1.05rem;display:flex;align-items:center;gap:0.3em;margin-bottom:0;">
                 Client Secret
-                <span class="custom-tooltip" data-tooltip="Enter your PingOne Worker App Client Secret">
-                  <span class="tooltip-icon">i</span>
-                  <span class="tooltip-content">Enter your PingOne Worker App Client Secret</span>
-                </span>
+                <span class="info-icon" data-tippy-content="Enter your PingOne Worker App Client Secret"></span>
               </label>
               <div style="position:relative;width:100%;max-width:420px;grid-column:2;">
-                <input type="password" id="settingsClientSecret" placeholder="Enter Client Secret" class="enhanced-input"
-                  style="padding:0.5rem 2.5rem 0.5rem 0.5rem;border-radius:6px;border:1px solid #cbd5e1;background:#f3f4f6;font-size:1rem;width:100%;max-width:420px;transition:width 0.2s;" data-tooltip="Your PingOne Client Secret from the worker application" />
-                <button id="settingsToggleSecretBtn" type="button" class="button-tooltip" data-tooltip="Toggle password visibility"
-                  style="position:absolute;right:0.5rem;top:50%;transform:translateY(-50%);background:none;border:none;padding:0.3rem;cursor:pointer;outline:none;z-index:2;">
+                <input type="password" id="settingsClientSecret" placeholder="Enter Client Secret" class="enhanced-input" data-tippy-content="Your PingOne Client Secret from the worker application" />
+                <button id="settingsToggleSecretBtn" type="button" class="button-tooltip" data-tippy-content="Toggle password visibility">
                   <svg id="settingsEyeIcon" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24"
                     fill="none" stroke="#0033a0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <circle cx="12" cy="12" r="3" />
@@ -1137,22 +1152,18 @@
                   </svg>
                 </button>
               </div>
-              <button id="clearSettingsClientSecretBtn" type="button" class="button-tooltip" data-tooltip="Clear the Client Secret field"
-                style="background:#e5e7eb;color:#0033a0;border:none;border-radius:6px;padding:0.5rem 0.9rem;font-size:1.1rem;cursor:pointer;transition:background 0.2s;">&times;</button>
+              <button id="clearSettingsClientSecretBtn" type="button" class="button-tooltip" data-tippy-content="Clear the Client Secret field">&times;</button>
             </div>
             <div class="settings-credentials-checkboxes-row">
               <div class="settings-credential-checkbox-item">
-                <input type="checkbox" id="settingsRememberClientSecret" class="unified-checkbox enhanced-input" data-tooltip="Remember the client secret in browser storage for convenience" checked />
+                <input type="checkbox" id="settingsRememberClientSecret" class="unified-checkbox enhanced-input" data-tippy-content="Remember the client secret in browser storage for convenience" checked />
                 <label for="settingsRememberClientSecret" class="settings-credential-checkbox-label">
                   Remember client secret
-                  <span class="info-tooltip">
-                    <span class="info-icon"></span>
-                    <span class="tooltip-content">Stores the client secret in browser storage for convenience across sessions</span>
-                  </span>
+                  <span class="info-icon" data-tippy-content="Stores the client secret in browser storage for convenience across sessions"></span>
                 </label>
               </div>
               <div class="settings-credential-checkbox-item">
-                <input type="checkbox" id="settingsSaveAllCredentials" class="unified-checkbox enhanced-input" data-tooltip="Save all credentials (Environment ID, Client ID, and Client Secret) to browser storage" checked />
+                <input type="checkbox" id="settingsSaveAllCredentials" class="unified-checkbox enhanced-input" data-tippy-content="Save all credentials (Environment ID, Client ID, and Client Secret) to browser storage" checked />
                 <label for="settingsSaveAllCredentials" class="settings-credential-checkbox-label">
                   Save all credentials
                   <span class="info-tooltip">
@@ -1199,10 +1210,7 @@
                     <input type="checkbox" id="saveFileNameCheckbox" class="unified-checkbox enhanced-input" data-tooltip="Save the selected file name to browser storage for future sessions" />
                     <label for="saveFileNameCheckbox" class="settings-file-checkbox-label">
                       Save file name
-                      <span class="info-tooltip">
-                        <span class="info-icon"></span>
-                        <span class="tooltip-content">Stores the selected file name across sessions and between pages</span>
-                      </span>
+                      <span class="info-icon" data-tippy-content="Stores the selected file name across sessions and between pages"></span>
                     </label>
                   </div>
                   <!-- File name display area for settings -->
@@ -1291,76 +1299,40 @@
               </span>
             </label>
             <label class="modify-attr-item"><input type="checkbox" class="red-checkbox" id="modAttrUsername">Username
-              <span class="info-tooltip">
-                <span class="info-icon"></span>
-                <span class="tooltip-content">Update the user's login username during modification</span>
-              </span>
+              <span class="info-icon" data-tippy-content="Update the user's login username during modification"></span>
             </label>
             <label class="modify-attr-item"><input type="checkbox" class="red-checkbox" id="modAttrPassword">Password
-              <span class="info-tooltip">
-                <span class="info-icon"></span>
-                <span class="tooltip-content">Update the user's password during modification</span>
-              </span>
+              <span class="info-icon" data-tippy-content="Update the user's password during modification"></span>
             </label>
             <label class="modify-attr-item"><input type="checkbox" class="red-checkbox" id="modAttrPopulation">Population
-              <span class="info-tooltip">
-                <span class="info-icon"></span>
-                <span class="tooltip-content">Update the user's assigned population during modification</span>
-              </span>
+              <span class="info-icon" data-tippy-content="Update the user's assigned population during modification"></span>
             </label>
             <label class="modify-attr-item"><input type="checkbox" class="red-checkbox" id="modAttrActive">Active
-              <span class="info-tooltip">
-                <span class="info-icon"></span>
-                <span class="tooltip-content">Enable or disable the user account during modification</span>
-              </span>
+              <span class="info-icon" data-tippy-content="Enable or disable the user account during modification"></span>
             </label>
             <label class="modify-attr-item"><input type="checkbox" class="red-checkbox" id="modAttrTitle">Title
-              <span class="info-tooltip">
-                <span class="info-icon"></span>
-                <span class="tooltip-content">Update the user's job title during modification</span>
-              </span>
+              <span class="info-icon" data-tippy-content="Update the user's job title during modification"></span>
             </label>
             <label class="modify-attr-item"><input type="checkbox" class="red-checkbox" id="modAttrPhone">Phone Numbers
-              <span class="info-tooltip">
-                <span class="info-icon"></span>
-                <span class="tooltip-content">Update the user's phone numbers during modification</span>
-              </span>
+              <span class="info-icon" data-tippy-content="Update the user's phone numbers during modification"></span>
             </label>
             <label class="modify-attr-item"><input type="checkbox" class="red-checkbox" id="modAttrAddress">Address
-              <span class="info-tooltip">
-                <span class="info-icon"></span>
-                <span class="tooltip-content">Update the user's address information during modification</span>
-              </span>
+              <span class="info-icon" data-tippy-content="Update the user's address information during modification"></span>
             </label>
             <label class="modify-attr-item"><input type="checkbox" class="red-checkbox" id="modAttrLocale">Locale
-              <span class="info-tooltip">
-                <span class="info-icon"></span>
-                <span class="tooltip-content">Update the user's locale/language preference during modification</span>
-              </span>
+              <span class="info-icon" data-tippy-content="Update the user's locale/language preference during modification"></span>
             </label>
             <label class="modify-attr-item"><input type="checkbox" class="red-checkbox" id="modAttrTimezone">Timezone
-              <span class="info-tooltip">
-                <span class="info-icon"></span>
-                <span class="tooltip-content">Update the user's timezone setting during modification</span>
-              </span>
+              <span class="info-icon" data-tippy-content="Update the user's timezone setting during modification"></span>
             </label>
             <label class="modify-attr-item"><input type="checkbox" class="red-checkbox" id="modAttrExternalId">External ID
-              <span class="info-tooltip">
-                <span class="info-icon"></span>
-                <span class="tooltip-content">Update the user's external identifier during modification</span>
-              </span>
+              <span class="info-icon" data-tippy-content="Update the user's external identifier during modification"></span>
             </label>
             <label class="modify-attr-item"><input type="checkbox" class="red-checkbox" id="modAttrType">Type
-              <span class="info-tooltip">
-                <span class="info-icon"></span>
-                <span class="tooltip-content">Update the user's account type during modification</span>
-              </span>
+              <span class="info-icon" data-tippy-content="Update the user's account type during modification"></span>
             </label>
             <label class="modify-attr-item"><input type="checkbox" class="red-checkbox" id="modAttrNickname">Nickname
-              <span class="info-tooltip">
-                <span class="info-icon"></span>
-                <span class="tooltip-content">Update the user's nickname during modification</span>
-              </span>
+              <span class="info-icon" data-tippy-content="Update the user's nickname during modification"></span>
             </label>
           </div>
         </div>
@@ -1368,19 +1340,13 @@
           <div style="font-size:1.45rem;font-weight:700;color:#0033a0;margin-bottom:1.1rem;">Advanced</div>
           <label style="font-size:1.18rem;color:#374151;display:flex;align-items:center;gap:0.3em;flex-wrap:nowrap;">
             API Base URL
-            <span class="info-tooltip-apiurl" style="display:inline-block;position:relative;cursor:pointer;">
-              <svg width="1em" height="1em" viewBox="0 0 20 20" fill="none" style="vertical-align:middle;" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="10" cy="10" r="9" stroke="#0033a0" stroke-width="2" fill="#f4f6fb"/>
-                <text x="10" y="15" text-anchor="middle" font-size="13" font-family="Arial, sans-serif" fill="#0033a0">i</text>
-              </svg>
-              <span style="visibility:hidden;opacity:0;transition:opacity 0.2s;position:absolute;bottom:120%;left:50%;transform:translateX(-50%);background:#22223b;color:#fff;padding:0.5em 1em;border-radius:8px;font-size:0.98em;white-space:nowrap;z-index:10;box-shadow:0 2px 8px rgba(0,0,0,0.13);pointer-events:none;">Change this only if you are using a custom PingOne domain.</span>
-            </span>
+            <span class="info-icon" data-tippy-content="Change this only if you are using a custom PingOne domain."></span>
             <input type="text" id="settingsApiBaseUrl" placeholder="https://api.pingone.com" style="max-width:320px;width:100%;margin-left:0.7em;" />
           </label>
         </div>
         <div class="settings-button-row">
-          <button type="submit" class="settings-btn button-tooltip" id="saveButton" data-tooltip="Save all current settings and validate your PingOne credentials">Save Settings</button>
-          <button type="button" onclick="showClearSettingsModal()" class="settings-btn button-tooltip" data-tooltip="Delete all saved settings and clear form data">Delete Settings</button>
+          <button type="submit" class="settings-btn button-tooltip" id="saveButton" data-tippy-content="Save all current settings and validate your PingOne credentials">Save Settings</button>
+          <button type="button" onclick="showClearSettingsModal()" class="settings-btn button-tooltip" data-tippy-content="Delete all saved settings and clear form data">Delete Settings</button>
         </div>
       </form>
     </div>
@@ -3200,104 +3166,6 @@
       }
     });
 
-    // Tooltip System
-    class TooltipManager {
-      constructor() {
-        this.init();
-      }
-
-      init() {
-        this.setupCustomTooltips();
-        this.setupEnhancedInputs();
-        this.setupButtonTooltips();
-      }
-
-      setupCustomTooltips() {
-        const tooltips = document.querySelectorAll('.custom-tooltip');
-        
-        tooltips.forEach(tooltip => {
-          const icon = tooltip.querySelector('.tooltip-icon');
-          const content = tooltip.querySelector('.tooltip-content');
-          
-          if (!icon || !content) return;
-
-          // Desktop hover events
-          tooltip.addEventListener('mouseenter', () => {
-            this.showTooltip(tooltip, content);
-          });
-
-          tooltip.addEventListener('mouseleave', () => {
-            this.hideTooltip(tooltip, content);
-          });
-
-          // Mobile touch events
-          tooltip.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            this.showTooltip(tooltip, content);
-          });
-
-          tooltip.addEventListener('touchend', (e) => {
-            e.preventDefault();
-            setTimeout(() => {
-              this.hideTooltip(tooltip, content);
-            }, 2000); // Hide after 2 seconds on mobile
-          });
-
-          // Hide tooltip when clicking outside
-          document.addEventListener('click', (e) => {
-            if (!tooltip.contains(e.target)) {
-              this.hideTooltip(tooltip, content);
-            }
-          });
-        });
-      }
-
-      setupEnhancedInputs() {
-        const inputs = document.querySelectorAll('.enhanced-input');
-        
-        inputs.forEach(input => {
-          // Add focus event for better accessibility
-          input.addEventListener('focus', () => {
-            input.setAttribute('aria-describedby', 'tooltip-' + input.id);
-          });
-
-          input.addEventListener('blur', () => {
-            input.removeAttribute('aria-describedby');
-          });
-        });
-      }
-
-      setupButtonTooltips() {
-        const buttons = document.querySelectorAll('.button-tooltip');
-        
-        buttons.forEach(button => {
-          // Add focus event for better accessibility
-          button.addEventListener('focus', () => {
-            button.setAttribute('aria-describedby', 'tooltip-' + button.id);
-          });
-
-          button.addEventListener('blur', () => {
-            button.removeAttribute('aria-describedby');
-          });
-        });
-      }
-
-      showTooltip(tooltip, content) {
-        tooltip.classList.add('show');
-        content.style.opacity = '1';
-        content.style.visibility = 'visible';
-      }
-
-      hideTooltip(tooltip, content) {
-        tooltip.classList.remove('show');
-        content.style.opacity = '0';
-        content.style.visibility = 'hidden';
-      }
-    }
-
-    // Initialize tooltip system
-    let tooltipManager;
-    
     // Modal Spinner Control Functions
     function showSpinnerModal(action, totalItems = 0) {
       const modal = document.getElementById('spinnerModal');
@@ -3358,7 +3226,21 @@
     
     // Initialize tooltip system when DOM is loaded
     document.addEventListener('DOMContentLoaded', function() {
-      tooltipManager = new TooltipManager();
+      tippy('[data-tippy-content]', {
+        theme: 'pingone',
+        placement: 'top',
+        arrow: true,
+        animation: 'shift-away',
+        duration: [200, 150],
+        delay: [0, 0],
+        interactive: false,
+        allowHTML: true,
+        maxWidth: 260,
+        offset: [0, 8],
+        // Keep tooltip on hover/tap, no timeout
+        trigger: 'mouseenter focus',
+        touch: ['hold', 500],
+      });
     });
   </script>
   
@@ -3759,5 +3641,27 @@
   </div>
 
   <!-- Clear Settings Modal -->
+  <script>
+    // ... existing code ...
+    // Initialize tippy.js on all elements with data-tippy-content
+    document.addEventListener('DOMContentLoaded', function() {
+      tippy('[data-tippy-content]', {
+        theme: 'pingone',
+        placement: 'top',
+        arrow: true,
+        animation: 'shift-away',
+        duration: [200, 150],
+        delay: [0, 0],
+        interactive: false,
+        allowHTML: true,
+        maxWidth: 260,
+        offset: [0, 8],
+        // Keep tooltip on hover/tap, no timeout
+        trigger: 'mouseenter focus',
+        touch: ['hold', 500],
+      });
+    });
+    // ... existing code ...
+  </script>
 </body>
 </html> 
