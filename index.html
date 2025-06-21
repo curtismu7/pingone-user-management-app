@@ -13,6 +13,173 @@
   <script src="https://unpkg.com/tippy.js@6"></script>
   <!-- Add PapaParse for CSV parsing -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.5.3/papaparse.min.js"></script>
+  
+  <!-- Library Loading Logger -->
+  <script>
+    // Library Loading Logger
+    window.libraryLogger = {
+      loadedLibraries: new Set(),
+      loadTimes: {},
+      errors: [],
+      
+      logLibraryLoad: function(libraryName, loadTime = Date.now(), source = 'unknown') {
+        const timestamp = new Date(loadTime).toISOString();
+        const loadDuration = this.loadTimes[libraryName] ? loadTime - this.loadTimes[libraryName] : 0;
+        
+        this.loadedLibraries.add(libraryName);
+        this.loadTimes[libraryName] = loadTime;
+        
+        const logMessage = `📚 Library Loaded: ${libraryName} | Time: ${timestamp} | Source: ${source} | Duration: ${loadDuration}ms`;
+        console.log(logMessage);
+        
+        // Also log to server if available
+        this.logToServer('library_loaded', {
+          library: libraryName,
+          timestamp: timestamp,
+          source: source,
+          duration: loadDuration,
+          page: window.location.pathname
+        });
+        
+        return logMessage;
+      },
+      
+      logLibraryError: function(libraryName, error, source = 'unknown') {
+        const timestamp = new Date().toISOString();
+        const errorInfo = {
+          library: libraryName,
+          error: error.message || error,
+          timestamp: timestamp,
+          source: source,
+          page: window.location.pathname
+        };
+        
+        this.errors.push(errorInfo);
+        
+        const logMessage = `❌ Library Error: ${libraryName} | Error: ${error.message || error} | Time: ${timestamp} | Source: ${source}`;
+        console.error(logMessage);
+        
+        // Log to server if available
+        this.logToServer('library_error', errorInfo);
+        
+        return logMessage;
+      },
+      
+      logToServer: function(eventType, data) {
+        // Try to send to server if available
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+          fetch('/log-library-event', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              event: eventType,
+              data: data,
+              userAgent: navigator.userAgent,
+              url: window.location.href
+            })
+          }).catch(err => {
+            // Silently fail if server is not available
+          });
+        }
+      },
+      
+      getLoadReport: function() {
+        return {
+          loadedLibraries: Array.from(this.loadedLibraries),
+          loadTimes: this.loadTimes,
+          errors: this.errors,
+          totalLibraries: this.loadedLibraries.size,
+          totalErrors: this.errors.length
+        };
+      }
+    };
+    
+    // Monitor script loading events
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('🔍 Library Loading Monitor initialized');
+      
+      // Check for already loaded libraries
+      setTimeout(() => {
+        // Check Papa Parse
+        if (typeof Papa !== 'undefined' && Papa.parse) {
+          window.libraryLogger.logLibraryLoad('PapaParse', Date.now(), 'head_script');
+        }
+        
+        // Check Tippy.js
+        if (typeof tippy !== 'undefined') {
+          window.libraryLogger.logLibraryLoad('Tippy.js', Date.now(), 'head_script');
+        }
+        
+        // Check Popper.js
+        if (typeof Popper !== 'undefined') {
+          window.libraryLogger.logLibraryLoad('Popper.js', Date.now(), 'head_script');
+        }
+      }, 100);
+    });
+    
+    // Global function to display library report (for debugging)
+    window.showLibraryReport = function() {
+      if (window.libraryLogger) {
+        return window.libraryLogger.displayLoadReport();
+      } else {
+        console.error('Library logger not available');
+        return null;
+      }
+    };
+    
+    // Global function to get library report data
+    window.getLibraryReport = function() {
+      if (window.libraryLogger) {
+        return window.libraryLogger.getLoadReport();
+      } else {
+        console.error('Library logger not available');
+        return null;
+      }
+    };
+    
+    // Override script loading to track dynamic loads
+    const originalCreateElement = document.createElement;
+    document.createElement = function(tagName) {
+      const element = originalCreateElement.call(document, tagName);
+      
+      if (tagName.toLowerCase() === 'script') {
+        const originalOnLoad = element.onload;
+        const originalOnError = element.onerror;
+        
+        element.onload = function(event) {
+          const scriptSrc = element.src || 'inline_script';
+          const libraryName = scriptSrc.includes('papaparse') ? 'PapaParse' :
+                             scriptSrc.includes('tippy') ? 'Tippy.js' :
+                             scriptSrc.includes('popper') ? 'Popper.js' :
+                             scriptSrc.split('/').pop().replace('.js', '') || 'Unknown';
+          
+          window.libraryLogger.logLibraryLoad(libraryName, Date.now(), 'dynamic_load');
+          
+          if (originalOnLoad) {
+            originalOnLoad.call(this, event);
+          }
+        };
+        
+        element.onerror = function(event) {
+          const scriptSrc = element.src || 'inline_script';
+          const libraryName = scriptSrc.includes('papaparse') ? 'PapaParse' :
+                             scriptSrc.includes('tippy') ? 'Tippy.js' :
+                             scriptSrc.includes('popper') ? 'Popper.js' :
+                             scriptSrc.split('/').pop().replace('.js', '') || 'Unknown';
+          
+          window.libraryLogger.logLibraryError(libraryName, 'Failed to load script: ' + scriptSrc, 'dynamic_load');
+          
+          if (originalOnError) {
+            originalOnError.call(this, event);
+          }
+        };
+      }
+      
+      return element;
+    };
+  </script>
   <style>
     body {
       background: #f4f6fb;
