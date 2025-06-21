@@ -138,8 +138,8 @@
       bottom: 125%;
       left: 50%;
       transform: translateX(-50%);
-      background: #22223b;
-      color: white;
+      background: white;
+      color: black;
       padding: 8px 12px;
       border-radius: 6px;
       font-size: 0.875rem;
@@ -153,6 +153,7 @@
       pointer-events: none;
       max-width: 280px;
       text-align: center;
+      border: 1px solid #e5e7eb;
     }
 
     .custom-tooltip .tooltip-content::after {
@@ -162,7 +163,7 @@
       left: 50%;
       transform: translateX(-50%);
       border: 5px solid transparent;
-      border-top-color: #22223b;
+      border-top-color: white;
     }
 
     .custom-tooltip.show .tooltip-content {
@@ -191,8 +192,8 @@
       bottom: 100%;
       left: 50%;
       transform: translateX(-50%);
-      background: #22223b;
-      color: white;
+      background: white;
+      color: black;
       padding: 6px 10px;
       border-radius: 4px;
       font-size: 0.8rem;
@@ -200,6 +201,7 @@
       z-index: 1000;
       margin-bottom: 5px;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      border: 1px solid #e5e7eb;
     }
 
     .enhanced-input:hover::before,
@@ -210,7 +212,7 @@
       left: 50%;
       transform: translateX(-50%);
       border: 4px solid transparent;
-      border-top-color: #22223b;
+      border-top-color: white;
       margin-bottom: 1px;
     }
 
@@ -225,8 +227,8 @@
       bottom: 100%;
       left: 50%;
       transform: translateX(-50%);
-      background: #22223b;
-      color: white;
+      background: white;
+      color: black;
       padding: 6px 10px;
       border-radius: 4px;
       font-size: 0.8rem;
@@ -234,6 +236,7 @@
       z-index: 1000;
       margin-bottom: 5px;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      border: 1px solid #e5e7eb;
     }
 
     .button-tooltip:hover::before {
@@ -243,7 +246,7 @@
       left: 50%;
       transform: translateX(-50%);
       border: 4px solid transparent;
-      border-top-color: #22223b;
+      border-top-color: white;
       margin-bottom: 1px;
     }
     
@@ -934,8 +937,8 @@
       bottom: 125%;
       left: 50%;
       transform: translateX(-50%);
-      background: #22223b;
-      color: white;
+      background: white;
+      color: black;
       padding: 8px 12px;
       border-radius: 8px;
       font-size: 0.9rem;
@@ -947,6 +950,7 @@
       max-width: 250px;
       white-space: normal;
       text-align: center;
+      border: 1px solid #e5e7eb;
     }
     
     .info-tooltip .tooltip-content::after {
@@ -957,7 +961,7 @@
       margin-left: -5px;
       border-width: 5px;
       border-style: solid;
-      border-color: #22223b transparent transparent transparent;
+      border-color: white transparent transparent transparent;
     }
     
     .info-tooltip:hover .tooltip-content,
@@ -3236,6 +3240,181 @@
         color: #0033a0;
         font-weight: 500;
       "></div>
+    </div>
+  </div>
+  
+  <!-- Credential Validation Error Modal -->
+  <div id="credentialErrorModal" style="
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 10000;
+    backdrop-filter: blur(2px);
+  ">
+    <div style="
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      border-radius: 16px;
+      padding: 0;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+      max-width: 600px;
+      width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
+    ">
+      <!-- Header -->
+      <div style="
+        background: #dc2626;
+        color: white;
+        padding: 1.5rem 2rem 1rem 2rem;
+        border-radius: 16px 16px 0 0;
+        position: relative;
+      ">
+        <button id="closeCredentialErrorModal" style="
+          position: absolute;
+          top: 1rem;
+          right: 1.5rem;
+          background: none;
+          border: none;
+          color: white;
+          font-size: 1.5rem;
+          cursor: pointer;
+          padding: 0;
+          width: 30px;
+          height: 30px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 50%;
+          transition: background-color 0.2s;
+        " onmouseover="this.style.backgroundColor='rgba(255,255,255,0.2)'" onmouseout="this.style.backgroundColor='transparent'">✖</button>
+        <div style="
+          display: flex;
+          align-items: center;
+          margin-bottom: 0.5rem;
+        ">
+          <div style="
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 1rem;
+          ">
+            <span style="font-size: 24px;">🔐</span>
+          </div>
+          <h2 style="
+            margin: 0;
+            color: white;
+            font-size: 1.5rem;
+            font-weight: 600;
+          ">Credential Validation Failed</h2>
+        </div>
+      </div>
+      
+      <!-- Body -->
+      <div style="padding: 2rem;">
+        <!-- Error Message -->
+        <div style="
+          background: #fef2f2;
+          border: 1px solid #fecaca;
+          border-radius: 8px;
+          padding: 1rem;
+          margin-bottom: 1.5rem;
+        ">
+          <div style="
+            color: #dc2626;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            font-size: 1rem;
+          ">We were unable to verify your credentials with PingOne.</div>
+          <div id="credentialErrorDetails" style="
+            color: #7f1d1d;
+            font-size: 0.9rem;
+            font-family: 'Courier New', monospace;
+            background: #fef2f2;
+            padding: 0.5rem;
+            border-radius: 4px;
+            border-left: 3px solid #dc2626;
+            margin-top: 0.5rem;
+          "></div>
+        </div>
+        
+        <!-- More Info Section -->
+        <div style="margin-bottom: 1.5rem;">
+          <button id="toggleTroubleshooting" style="
+            background: #0033a0;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 0.75rem 1.5rem;
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+          " onmouseover="this.style.background='#002266'" onmouseout="this.style.background='#0033a0'">
+            <span id="troubleshootingIcon">▶</span>
+            More Info
+          </button>
+          
+          <div id="troubleshootingContent" style="
+            display: none;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-top: 1rem;
+          ">
+            <h3 style="
+              margin: 0 0 1rem 0;
+              color: #1e293b;
+              font-size: 1.1rem;
+              font-weight: 600;
+            ">Troubleshooting Steps:</h3>
+            <ul style="
+              margin: 0;
+              padding-left: 1.5rem;
+              color: #475569;
+              line-height: 1.6;
+            ">
+              <li style="margin-bottom: 0.5rem;">Check that the <strong>Environment ID</strong>, <strong>Client ID</strong>, and <strong>Client Secret</strong> are correct.</li>
+              <li style="margin-bottom: 0.5rem;">Ensure your Worker App has the <strong>client_credentials</strong> grant type enabled.</li>
+              <li style="margin-bottom: 0.5rem;">Make sure the credentials belong to a <strong>Worker App</strong>, not a regular app.</li>
+              <li style="margin-bottom: 0.5rem;">Verify that the environment ID matches the region (e.g., US, EU).</li>
+              <li style="margin-bottom: 0.5rem;">You may also need to check API permissions/scopes in PingOne.</li>
+            </ul>
+          </div>
+        </div>
+        
+        <!-- OK Button -->
+        <div style="text-align: center;">
+          <button id="dismissCredentialError" style="
+            background: #dc2626;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 0.75rem 2rem;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+          " onmouseover="this.style.background='#b91c1c'" onmouseout="this.style.background='#dc2626'">
+            OK
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </body>
