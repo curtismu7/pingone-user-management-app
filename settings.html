@@ -3183,6 +3183,9 @@
         // Show loading spinner
         showSpinnerModal('Test Credentials', 0);
         
+        // Show worker token status at the start
+        showWorkerTokenStatus();
+        
         // Send JSON data instead of FormData
         const response = await fetch('/get-worker-token', {
           method: 'POST',
@@ -3220,7 +3223,15 @@
         }
       } catch (error) {
         window.credentialsValidated = false;
-        statusSpan.textContent = '❌ Invalid credentials. Please check your Environment ID, Client ID, and Client Secret';
+        
+        // Check if this is a 429 error and handle it specially
+        if (is429Error(error)) {
+          handle429Error(error, 'Credential Test');
+          statusSpan.textContent = '⚠️ Rate limit exceeded. Please wait and try again.';
+        } else {
+          statusSpan.textContent = '❌ Invalid credentials. Please check your Environment ID, Client ID, and Client Secret';
+        }
+        
         statusSpan.style.color = '#dc2626';
         testBtn.textContent = 'Test Credentials';
         testBtn.disabled = false;
@@ -3298,6 +3309,51 @@
       modal.style.display = 'block';
     }
     
+    // Worker Token Status Functions
+    function showWorkerTokenStatus() {
+      const workerTokenStatus = document.getElementById('workerTokenStatus');
+      const workerTokenText = document.getElementById('workerTokenText');
+      
+      if (workerTokenStatus && workerTokenText) {
+        workerTokenText.textContent = 'Getting Worker Token...';
+        workerTokenStatus.style.display = 'block';
+        workerTokenStatus.style.color = '#16a34a';
+        workerTokenStatus.style.background = '#f0fdf4';
+        workerTokenStatus.style.borderColor = '#bbf7d0';
+      }
+    }
+    
+    function updateWorkerTokenSuccess() {
+      const workerTokenStatus = document.getElementById('workerTokenStatus');
+      const workerTokenText = document.getElementById('workerTokenText');
+      
+      if (workerTokenStatus && workerTokenText) {
+        workerTokenText.textContent = 'Getting Worker Token ✅';
+        workerTokenStatus.style.color = '#16a34a';
+        workerTokenStatus.style.background = '#f0fdf4';
+        workerTokenStatus.style.borderColor = '#bbf7d0';
+      }
+    }
+    
+    function updateWorkerTokenError() {
+      const workerTokenStatus = document.getElementById('workerTokenStatus');
+      const workerTokenText = document.getElementById('workerTokenText');
+      
+      if (workerTokenStatus && workerTokenText) {
+        workerTokenText.textContent = 'Failed to retrieve Worker Token ❌';
+        workerTokenStatus.style.color = '#dc2626';
+        workerTokenStatus.style.background = '#fef2f2';
+        workerTokenStatus.style.borderColor = '#fecaca';
+      }
+    }
+    
+    function hideWorkerTokenStatus() {
+      const workerTokenStatus = document.getElementById('workerTokenStatus');
+      if (workerTokenStatus) {
+        workerTokenStatus.style.display = 'none';
+      }
+    }
+    
     function updateSpinnerProgress(completed, total, batchCounter = 0, summary = false, isComplete = false) {
       const progress = document.getElementById('modalProgress');
       if (progress && total > 0) {
@@ -3319,8 +3375,10 @@
     function hideSpinnerModal() {
       const modal = document.getElementById('spinnerModal');
       modal.style.display = 'none';
+      // Also hide worker token status when hiding spinner
+      hideWorkerTokenStatus();
     }
-    
+
     // Initialize tooltip system when DOM is loaded
     document.addEventListener('DOMContentLoaded', function() {
       tippy('[data-tippy-content]', {
@@ -3438,6 +3496,61 @@
         }
       }
     }
+
+    // Function to handle 429 (Too Many Requests) errors gracefully
+    function handle429Error(error, operation) {
+      console.error(`${operation} error (429):`, error);
+      
+      // Update worker token status to error
+      updateWorkerTokenError();
+      
+      // Show rate limit warning
+      showRateLimitWarning();
+      
+      // Create user-friendly error message
+      const errorMessage = `⚠️ Rate limit exceeded. The server is temporarily limiting requests to prevent overload. Please wait a moment and try again.`;
+      
+      // Show a user-friendly popup
+      if (typeof unifiedPopup !== 'undefined') {
+        unifiedPopup.alert(
+          `Rate limit exceeded. Please wait a moment and try again.\n\nThis usually happens when:\n• Processing large CSV files\n• Making multiple requests quickly\n• Server is under high load\n\nTry again in 30-60 seconds.`,
+          'Rate Limit Exceeded'
+        );
+      } else {
+        // Fallback to alert if unifiedPopup is not available
+        alert(`Rate limit exceeded. Please wait 30-60 seconds and try again.`);
+      }
+    }
+    
+    // Function to check if an error is a 429 error
+    function is429Error(error) {
+      return error.message && (
+        error.message.includes('429') || 
+        error.message.includes('Too Many Requests') ||
+        error.message.includes('rate limit')
+      );
+    }
+    
+    // Function to show rate limit warning
+    function showRateLimitWarning() {
+      const rateLimitWarning = document.getElementById('rateLimitWarning');
+      if (rateLimitWarning) {
+        rateLimitWarning.style.display = 'flex';
+        
+        // Auto-hide after 60 seconds
+        setTimeout(() => {
+          hideRateLimitWarning();
+        }, 60000);
+      }
+    }
+    
+    // Function to hide rate limit warning
+    function hideRateLimitWarning() {
+      const rateLimitWarning = document.getElementById('rateLimitWarning');
+      if (rateLimitWarning) {
+        rateLimitWarning.style.display = 'none';
+      }
+    }
   </script>
   
   <!-- Modal Spinner Overlay -->
@@ -3474,6 +3587,22 @@
         animation: spin 1s linear infinite;
         margin: 0 auto 1.5rem auto;
       "></div>
+      
+      <!-- Worker Token Status Indicator -->
+      <div id="workerTokenStatus" style="
+        font-size: 0.9rem;
+        color: #16a34a;
+        font-weight: 500;
+        margin-bottom: 1rem;
+        padding: 0.5rem;
+        border-radius: 6px;
+        background: #f0fdf4;
+        border: 1px solid #bbf7d0;
+        display: none;
+      ">
+        <span id="workerTokenText">Getting Worker Token...</span>
+      </div>
+      
       <div id="modalTitle" style="
         font-size: 1.3rem;
         font-weight: 600;
