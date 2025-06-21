@@ -167,46 +167,8 @@ const requestLogger = (req, res, next) => {
  * Security headers middleware
  */
 const securityHeaders = helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      styleSrc: [
-        "'self'", 
-        "'unsafe-inline'", 
-        "https://fonts.googleapis.com", 
-        "https://assets.pingone.com",
-        "https://unpkg.com",
-        "https://use.typekit.net",
-        "https://p.typekit.net"
-      ],
-      scriptSrc: [
-        "'self'", 
-        "'unsafe-inline'", 
-        "https://unpkg.com", 
-        "https://cdnjs.cloudflare.com"
-      ],
-      scriptSrcAttr: ["'unsafe-inline'"],
-      fontSrc: [
-        "'self'", 
-        "https://fonts.gstatic.com",
-        "https://assets.pingone.com",
-        "https://use.typekit.net",
-        "https://p.typekit.net",
-        "data:"
-      ],
-      imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: [
-        "'self'", 
-        "https://auth.pingone.com", 
-        "https://api.pingone.com"
-      ]
-    }
-  },
-  hsts: {
-    maxAge: 31536000,
-    includeSubDomains: true,
-    preload: true
-  }
+  contentSecurityPolicy: false,
+  // ... other helmet options ...
 });
 
 /**

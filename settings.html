@@ -5,1139 +5,76 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Settings - Ping Identity</title>
   <link href="https://fonts.googleapis.com/css?family=Inter:400,500,700&display=swap" rel="stylesheet">
-  <style>
-    body {
-      background: #f4f6fb;
-      color: #22223b;
-      font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
-      margin: 0;
-      min-height: 100vh;
-      position: relative;
-      margin-bottom: 60px; /* Reduced space for footer */
-      overflow-y: auto;
-      overflow-x: hidden;
-      box-sizing: border-box;
-      scrollbar-width: thin;
-      scrollbar-color: #e60028 #f4f6fb;
-    }
-    html {
-      overflow-y: auto;
-      overflow-x: hidden;
-      box-sizing: border-box;
-    }
-    
-    /* Custom Scrollbar Styling */
-    /* WebKit-based browsers (Chrome, Safari, Edge) */
-    ::-webkit-scrollbar {
-      width: 12px;
-      height: 12px;
-    }
-    
-    ::-webkit-scrollbar-track {
-      background: #f1f1f1;
-      border-radius: 6px;
-    }
-    
-    ::-webkit-scrollbar-thumb {
-      background: #e60028;
-      border-radius: 6px;
-      border: 2px solid #f1f1f1;
-    }
-    
-    ::-webkit-scrollbar-thumb:hover {
-      background: #cc0024;
-    }
-    
-    ::-webkit-scrollbar-corner {
-      background: #f1f1f1;
-    }
-    
-    /* Firefox scrollbar styling */
-    * {
-      scrollbar-width: thin;
-      scrollbar-color: #e60028 #f1f1f1;
-    }
-    
-    /* Fallback for browsers that don't support custom scrollbars */
-    @supports not (scrollbar-color: auto) {
-      * {
-        scrollbar-width: auto;
-      }
-    }
-    
-    /* Ensure scrollbars are visible on specific elements */
-    .sidebar {
-      scrollbar-width: thin;
-      scrollbar-color: #e60028 #394667;
-    }
-    
-    .sidebar::-webkit-scrollbar-track {
-      background: #394667;
-    }
-    
-    .sidebar::-webkit-scrollbar-thumb {
-      background: #e60028;
-      border: 2px solid #394667;
-    }
-    
-    .sidebar::-webkit-scrollbar-thumb:hover {
-      background: #cc0024;
-    }
-    
-    /* Settings page specific scrollbar styling */
-    body {
-      scrollbar-width: thin;
-      scrollbar-color: #e60028 #f4f6fb;
-    }
-    
-    body::-webkit-scrollbar-track {
-      background: #f4f6fb;
-    }
-    
-    body::-webkit-scrollbar-thumb {
-      background: #e60028;
-      border: 2px solid #f4f6fb;
-    }
-    
-    body::-webkit-scrollbar-thumb:hover {
-      background: #cc0024;
-    }
-    
-    * {
-      box-sizing: border-box;
-    }
-    
-    /* Custom Tooltip Styling */
-    .custom-tooltip {
-      position: relative;
-      display: inline-block;
-      cursor: pointer;
-    }
-
-    .custom-tooltip .tooltip-icon {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 16px;
-      height: 16px;
-      border-radius: 50%;
-      background: #0033a0;
-      color: white;
-      font-size: 11px;
-      font-weight: bold;
-      margin-left: 4px;
-      transition: background-color 0.2s;
-    }
-
-    .custom-tooltip:hover .tooltip-icon {
-      background: #002266;
-    }
-
-    .custom-tooltip .tooltip-content {
-      position: absolute;
-      bottom: 125%;
-      left: 50%;
-      transform: translateX(-50%);
-      background: white;
-      color: black;
-      padding: 8px 12px;
-      border-radius: 6px;
-      font-size: 0.875rem;
-      line-height: 1.4;
-      white-space: normal;
-      z-index: 1000;
-      opacity: 0;
-      visibility: hidden;
-      transition: opacity 0.2s, visibility 0.2s;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-      pointer-events: none;
-      max-width: 200px;
-      min-width: 120px;
-      text-align: center;
-      border: 1px solid #e5e7eb;
-      word-wrap: break-word;
-      overflow-wrap: break-word;
-    }
-
-    .custom-tooltip .tooltip-content::after {
-      content: '';
-      position: absolute;
-      top: 100%;
-      left: 50%;
-      transform: translateX(-50%);
-      border: 5px solid transparent;
-      border-top-color: white;
-    }
-
-    .custom-tooltip.show .tooltip-content {
-      opacity: 1;
-      visibility: visible;
-    }
-
-    /* Mobile tooltip support */
-    @media (max-width: 768px) {
-      .custom-tooltip .tooltip-content {
-        white-space: normal;
-        max-width: 180px;
-        min-width: 100px;
-        font-size: 0.8rem;
-        word-wrap: break-word;
-        overflow-wrap: break-word;
-      }
-    }
-
-    /* Enhanced input tooltips */
-    .enhanced-input {
-      position: relative;
-    }
-
-    .enhanced-input:hover::after,
-    .enhanced-input:focus::after {
-      content: attr(data-tooltip);
-      position: absolute;
-      bottom: 100%;
-      left: 50%;
-      transform: translateX(-50%);
-      background: white;
-      color: black;
-      padding: 6px 10px;
-      border-radius: 4px;
-      font-size: 0.8rem;
-      white-space: normal;
-      z-index: 1000;
-      margin-bottom: 5px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-      border: 1px solid #e5e7eb;
-      max-width: 180px;
-      min-width: 100px;
-      word-wrap: break-word;
-      overflow-wrap: break-word;
-    }
-
-    .enhanced-input:hover::before,
-    .enhanced-input:focus::before {
-      content: '';
-      position: absolute;
-      bottom: 100%;
-      left: 50%;
-      transform: translateX(-50%);
-      border: 4px solid transparent;
-      border-top-color: white;
-      margin-bottom: 1px;
-    }
-
-    /* Button tooltips */
-    .button-tooltip {
-      position: relative;
-    }
-
-    .button-tooltip:hover::after {
-      content: attr(data-tooltip);
-      position: absolute;
-      bottom: 100%;
-      left: 50%;
-      transform: translateX(-50%);
-      background: white;
-      color: black;
-      padding: 6px 10px;
-      border-radius: 4px;
-      font-size: 0.8rem;
-      white-space: normal;
-      z-index: 1000;
-      margin-bottom: 5px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-      border: 1px solid #e5e7eb;
-      max-width: 180px;
-      min-width: 100px;
-      word-wrap: break-word;
-      overflow-wrap: break-word;
-    }
-
-    .button-tooltip:hover::before {
-      content: '';
-      position: absolute;
-      bottom: 100%;
-      left: 50%;
-      transform: translateX(-50%);
-      border: 4px solid transparent;
-      border-top-color: white;
-      margin-bottom: 1px;
-    }
-    
-    .settings-card {
-      background: #fff;
-      border-radius: 0;
-      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
-      padding: 0.8rem 0.8rem 0.8rem 0.8rem;
-      max-width: 1000px;
-      width: calc(100vw - 240px); /* Account for sidebar and margins */
-      margin: 0.5rem auto 0.5rem auto;
-      text-align: center;
-      display: flex;
-      flex-direction: column;
-      align-items: stretch;
-      box-sizing: border-box;
-      padding-bottom: 0.8rem;
-    }
-    .settings-banner {
-      width: 100%;
-      background: #e60028;
-      color: #fff;
-      font-size: 1.1rem;
-      font-weight: 700;
-      text-align: center;
-      padding: 0.5rem 0 0.5rem 0;
-      letter-spacing: 0.5px;
-      border-radius: 12px 12px 0 0;
-      margin-bottom: 0.5rem;
-    }
-    .settings-section {
-      background: #f5f6fa;
-      border: 1.5px solid #e5e7eb;
-      border-radius: 10px;
-      padding: 0.6rem 0.8rem 0.6rem 0.8rem;
-      margin-bottom: 0.8rem;
-      width: 100%;
-    }
-    .settings-section label {
-      font-size: 0.95rem;
-      color: #374151;
-      margin-top: 0.2rem;
-      font-weight: 500;
-      display: block;
-    }
-    .settings-section input[type="text"],
-    .settings-section input[type="password"],
-    .settings-section input[type="number"],
-    .settings-section select {
-      width: 100%;
-      max-width: 100%;
-      padding: 0.3rem 0.6rem;
-      margin-top: 0.1rem;
-      border-radius: 5px;
-      border: 1.2px solid #cbd5e1;
-      font-size: 0.9rem;
-      font-family: inherit;
-      box-sizing: border-box;
-      margin-bottom: 0.8rem;
-    }
-    #settingsEnvId, #settingsClientId, #settingsClientSecret {
-      min-width: 0;
-      width: 100%;
-      max-width: 400px;
-      font-family: monospace;
-      font-size: 0.9rem;
-    }
-    .settings-row {
-      display: flex;
-      gap: 0.6rem;
-      margin-bottom: 0.3rem;
-      flex-wrap: wrap;
-    }
-    .settings-row > div {
-      flex: 1 1 0;
-      min-width: 0;
-    }
-    .settings-btn {
-      border: 2px solid #e60028;
-      background: #fff;
-      color: #e60028;
-      border-radius: 8px;
-      padding: 0.4rem 1rem;
-      font-size: 0.9rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.2s, color 0.2s, border 0.2s;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-      min-width: 100px;
-      text-align: center;
-      display: inline-block;
-      margin-top: 0;
-      white-space: nowrap;
-    }
-    #settingsToggleSecretBtn.settings-btn {
-      border: none !important;
-      box-shadow: none !important;
-      background: none !important;
-      color: #0033a0 !important;
-      padding: 0.3rem !important;
-      min-width: unset;
-      width: 2.2em;
-      height: 2.2em;
-    }
-    .settings-btn:hover {
-      background: #e60028;
-      color: #fff;
-    }
-    #settingsSavedModal {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      background: rgba(0,0,0,0.18);
-      z-index: 3000;
-      align-items: center;
-      justify-content: center;
-    }
-    #settingsSavedModal .modal-content {
-      background: #fff;
-      border-radius: 18px;
-      box-shadow: 0 4px 24px rgba(0,0,0,0.18);
-      padding: 1.5rem 2rem 2rem 2rem;
-      min-width: 320px;
-      max-width: 95vw;
-      position: relative;
-      border: 1.5px solid #e60028;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    #settingsSavedModal .modal-title {
-      color: #0033a0;
-      font-size: 1.3rem;
-      font-weight: 700;
-      margin-bottom: 1rem;
-      text-align: center;
-    }
-    #settingsSavedModal .settings-btn {
-      border: 2px solid #e60028;
-      background: #fff;
-      color: #e60028;
-      border-radius: 8px;
-      padding: 0.5rem 1.5rem;
-      font-size: 1rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.2s, color 0.2s, border 0.2s;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-      min-width: 100px;
-      text-align: center;
-      display: inline-block;
-      margin-top: 1.2rem;
-    }
-    #settingsSavedModal .settings-btn:hover {
-      background: #e60028;
-      color: #fff;
-    }
-    /* Custom red checkboxes */
-    .red-checkbox {
-      appearance: none;
-      -webkit-appearance: none;
-      background: #fff;
-      border: 2px solid #e60028;
-      border-radius: 5px;
-      width: 1.3em;
-      height: 1.3em;
-      cursor: pointer;
-      position: relative;
-      margin-right: 0.5em;
-      vertical-align: middle;
-      outline: none;
-      transition: border 0.2s;
-    }
-    .red-checkbox:checked {
-      background: #fff;
-      border: 2px solid #e60028;
-    }
-    .red-checkbox:checked::after {
-      content: '\2714';
-      color: #0074d9;
-      font-size: 1.1em;
-      position: absolute;
-      left: 0.18em;
-      top: -0.05em;
-      font-weight: bold;
-      pointer-events: none;
-    }
-    .modify-attr-list {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5em 0.8em;
-      margin-top: 0.2em;
-      margin-bottom: 0.2em;
-    }
-    .modify-attr-item {
-      font-size: 0.9em;
-      color: #374151;
-      display: flex;
-      align-items: center;
-      min-width: 100px;
-      margin-bottom: 0.2em;
-    }
-    /* Button row for Save and Clear All Settings */
-    .settings-button-row {
-      display: flex;
-      gap: 0.8rem;
-      justify-content: center;
-      align-items: center;
-      margin-top: 0.8rem;
-      flex-wrap: wrap;
-      width: 100%;
-    }
-    .settings-button-row .settings-btn {
-      margin-top: 0;
-      min-width: 120px;
-      max-width: 180px;
-    }
-    .pingone-footer {
-      background: #22223b;
-      color: #fff;
-      font-size: 0.85rem;
-      text-align: center;
-      letter-spacing: 0.2px;
-      padding: 0.7rem 0 0.7rem 0;
-      position: fixed;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      width: 100vw;
-      z-index: 100;
-    }
-    .pingone-footer strong {
-      color: #e60028;
-      font-weight: 700;
-      letter-spacing: 0.5px;
-    }
-    .sidebar {
-      background: #394667;
-      color: #fff;
-      width: 200px;
-      min-width: 200px;
-      height: 100vh;
-      position: fixed;
-      left: 0;
-      top: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: flex-start;
-      box-shadow: 2px 0 8px rgba(0, 0, 0, 0.04);
-      z-index: 10;
-      scrollbar-width: thin;
-      scrollbar-color: #e60028 #394667;
-    }
-    .sidebar-logo {
-      width: 100%;
-      height: 40px;
-      background: #394667;
-      display: flex;
-      align-items: center;
-      justify-content: flex-start;
-      border-right: 1px solid #fff;
-      border-bottom: 1px solid #fff;
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    .sidebar-logo img {
-      height: 24px;
-      width: auto;
-      margin-left: 12px;
-      display: block;
-    }
-    .sidebar-nav {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      margin-top: 1rem;
-    }
-    .sidebar-action {
-      background: none;
-      color: #fff;
-      font-size: 0.9rem;
-      padding: 0.6rem 0.8rem;
-      margin: 0.4rem 0.5rem;
-      text-align: center;
-      border: 2px solid #e60028;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: background 0.2s, color 0.2s, border 0.2s;
-      outline: none;
-      user-select: none;
-      box-sizing: border-box;
-      background: #394667;
-      white-space: nowrap;
-    }
-    .sidebar-action.active,
-    .sidebar-action:hover {
-      background: #ffe5e5 !important;
-      color: #e60028 !important;
-      border: 2px solid #e60028 !important;
-    }
-    /* Remove red outline from "Go back to main page" link */
-    .sidebar-action[href="index.html"] {
-      border: none !important;
-    }
-    .sidebar-action[href="index.html"]:hover {
-      border: none !important;
-    }
-    .sidebar-action[href="index.html"]:focus {
-      outline: none !important;
-      box-shadow: none !important;
-    }
-    .sidebar-nav .nav-section {
-      margin-bottom: 0.4rem;
-    }
-    .sidebar-nav .nav-link {
-      display: flex;
-      align-items: center;
-      padding: 0.4rem 0.8rem;
-      color: #fff;
-      text-decoration: none;
-      font-size: 0.85rem;
-      border-left: 3px solid transparent;
-      transition: background 0.2s, border-color 0.2s;
-      border-radius: 4px;
-      margin: 0 0.4rem;
-    }
-    .sidebar-nav .nav-link .nav-icon {
-      margin-right: 0.6rem;
-      font-size: 1rem;
-    }
-    .sidebar-nav .nav-link.active,
-    .sidebar-nav .nav-link:hover {
-      background: rgba(45, 46, 74, 0.7);
-      border-left: 3px solid #e60028;
-      color: #e60028;
-      font-weight: 500;
-      box-shadow: 0 1px 4px rgba(230, 0, 40, 0.2);
-      transform: translateX(1px);
-    }
-    .sidebar-nav .nav-link.active {
-      background: linear-gradient(135deg, rgba(45, 46, 74, 0.8) 0%, rgba(58, 59, 90, 0.8) 100%);
-      border-left: 4px solid #e60028;
-      color: #e60028;
-      font-weight: 600;
-      box-shadow: 0 2px 8px rgba(230, 0, 40, 0.3);
-      transform: translateX(2px);
-      position: relative;
-    }
-    .sidebar-nav .nav-link.active::before {
-      content: '';
-      position: absolute;
-      left: 0;
-      top: 0;
-      bottom: 0;
-      width: 4px;
-      background: #e60028;
-      box-shadow: 0 0 8px rgba(230, 0, 40, 0.6);
-    }
-    .sidebar-nav .nav-caret {
-      margin-left: auto;
-      transition: transform 0.2s;
-    }
-    .sidebar-nav .nav-group.open .nav-caret {
-      transform: rotate(180deg);
-    }
-    .sidebar-nav .nav-sub-links {
-      display: none;
-      padding-left: 0.8rem;
-      background-color: #313d5a;
-    }
-    .sidebar-nav .nav-sublink {
-      font-size: 0.8rem;
-    }
-    .main-red-banner {
-      position: fixed !important;
-      top: 0;
-      left: 200px;
-      width: calc(100vw - 200px);
-      z-index: 2000 !important;
-      background: #e60028;
-      color: #fff;
-      font-size: 1.1rem;
-      font-weight: 700;
-      text-align: center;
-      padding: 0.5rem 0 0.5rem 0;
-      letter-spacing: 0.5px;
-      pointer-events: auto;
-    }
-    .settings-section > div[style*='font-size:1.45rem'],
-    .settings-section > div[style*='font-size:2rem'],
-    .settings-section > div[style*='font-size:1.45rem;font-weight:700;color:#0033a0;margin-bottom:1.1rem;'],
-    .settings-section > div[style*='font-size:2rem;font-weight:900;color:#0033a0;margin-bottom:1.1rem;'] {
-      font-size: 1rem !important;
-      margin-bottom: 0.3rem !important;
-      font-weight: 600 !important;
-    }
-    /* Responsive breakpoints - laptop only */
-    @media (max-width: 1200px) {
-      .settings-card {
-        width: calc(100vw - 240px);
-        max-width: 900px;
-      }
-      .main-red-banner {
-        left: 200px;
-        width: calc(100vw - 200px);
-      }
-      .main-header {
-        left: 200px;
-        width: calc(100vw - 200px);
-      }
-    }
-    @media (max-width: 900px) {
-      .settings-card {
-        width: calc(100vw - 220px);
-        max-width: 800px;
-      }
-      .main-red-banner {
-        left: 200px;
-        width: calc(100vw - 200px);
-      }
-      .main-header {
-        left: 200px;
-        width: calc(100vw - 200px);
-      }
-      .settings-row {
-        flex-direction: column;
-        gap: 0.5rem;
-      }
-      .settings-row > div {
-        flex: none;
-        width: 100%;
-      }
-    }
-    /* Ultra-wide screen support */
-    @media (min-width: 1400px) {
-      .settings-card {
-        max-width: 1200px;
-        width: calc(100vw - 280px);
-      }
-      .main-red-banner {
-        left: 240px;
-        width: calc(100vw - 240px);
-      }
-      .main-header {
-        left: 240px;
-        width: calc(100vw - 240px);
-      }
-    }
-    /* High DPI display support */
-    @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
-      .settings-btn {
-        border-width: 1.5px;
-      }
-      .red-checkbox {
-        border-width: 1.5px;
-      }
-    }
-    /* Print styles */
-    @media print {
-      .sidebar, .main-red-banner, .pingone-footer {
-        display: none !important;
-      }
-      .settings-card {
-        width: 100% !important;
-        max-width: 100% !important;
-        margin: 0 !important;
-        box-shadow: none !important;
-      }
-      body {
-        margin: 0 !important;
-        background: white !important;
-      }
-    }
-    .main-header {
-      position: fixed;
-      top: 2.5rem;
-      left: clamp(200px, 20vw, 240px);
-      width: calc(100vw - clamp(200px, 20vw, 240px));
-      background: #fff;
-      padding: clamp(0.6rem, 1.5vh, 1.2rem) clamp(1.5rem, 2.5vw, 2.5rem);
-      border-bottom: 1px solid #e5e7eb;
-      font-size: clamp(0.9rem, 1.8vw, 1.2rem);
-      font-weight: 500;
-      color: #22223b;
-      display: flex;
-      align-items: center;
-      min-height: clamp(44px, 6vh, 64px);
-      flex-shrink: 0;
-      z-index: 100;
-    }
-    
-    .settings-card {
-    }
-    .file-input-container {
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-    }
-    
-    .settings-file-checkbox-row {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-    
-    .settings-file-checkbox-label {
-      font-size: 0.95rem;
-      color: #374151;
-      cursor: pointer;
-      user-select: none;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-    
-    #clearDefaultFileBtn {
-      background: #e5e7eb;
-      color: #0033a0;
-      border: none;
-      border-radius: 6px;
-      padding: 0.5rem 0.9rem;
-      font-size: 1rem;
-      cursor: pointer;
-      transition: background 0.2s;
-      height: fit-content;
-      white-space: nowrap;
-    }
-    
-    #clearDefaultFileBtn:hover {
-      background: #d1d5db;
-    }
-    
-    #settingsDefaultFile {
-      width: 100%;
-      height: 2.5rem;
-      font-size: 1rem;
-      padding: 0.5rem 0.8rem;
-      border-radius: 6px;
-      border: 1px solid #cbd5e1;
-      background: #f3f4f6;
-      box-sizing: border-box;
-      color: #e60028;
-      cursor: pointer;
-      transition: border-color 0.2s, background-color 0.2s;
-    }
-    
-    #settingsDefaultFile:hover {
-      border-color: #e60028;
-      background: #f8fafc;
-    }
-    
-    #settingsDefaultFile:focus {
-      outline: none;
-      border-color: #e60028;
-      box-shadow: 0 0 0 2px rgba(230, 0, 40, 0.1);
-    }
-    
-    .custom-checkbox-label {
-      font-size: 1.1em;
-      user-select: none;
-    }
-    .custom-checkbox-box {
-      display: inline-block;
-      width: 1.5em;
-      height: 1.5em;
-      border: 2.5px solid #e60028;
-      border-radius: 5px;
-      background: #fff;
-      position: relative;
-      margin-right: 0.4em;
-      box-sizing: border-box;
-      vertical-align: middle;
-      transition: border-color 0.2s;
-    }
-    .custom-checkbox-label input:checked + .custom-checkbox-box::after {
-      content: '\2714';
-      color: #0074d9;
-      font-size: 1.3em;
-      position: absolute;
-      left: 0.18em;
-      top: -0.05em;
-      font-weight: bold;
-      display: block;
-    }
-    .custom-checkbox-box::after {
-      content: '';
-      position: absolute;
-      display: none;
-    }
-    .custom-checkbox-label input:checked + .custom-checkbox-box {
-      border-color: #e60028;
-      background: #fff;
-    }
-    .custom-checkbox-label input:focus + .custom-checkbox-box {
-      outline: 2px solid #e60028;
-      outline-offset: 2px;
-    }
-
-    /* Unified Checkbox Styles */
-    .unified-checkbox {
-      width: 1.3rem;
-      height: 1.3rem;
-      background: #fff;
-      border: 2px solid #e60028;
-      border-radius: 4px;
-      outline: 2px solid #e60028;
-      box-shadow: 0 0 0 2px #fff;
-      margin-right: 0.5rem;
-      vertical-align: middle;
-      appearance: none;
-      -webkit-appearance: none;
-      -moz-appearance: none;
-      position: relative;
-      cursor: pointer;
-      display: inline-block;
-      background-clip: padding-box;
-    }
-
-    .unified-checkbox:checked::after {
-      content: '\2714';
-      color: #0074d9;
-      font-size: 1.1rem;
-      position: absolute;
-      left: 0.18rem;
-      top: 0.02rem;
-      font-weight: bold;
-      pointer-events: none;
-    }
-
-    .unified-checkbox:focus {
-      outline: 2px solid #e60028;
-      border-color: #e60028;
-    }
-
-    /* Settings Credentials Checkboxes Layout */
-    .settings-credentials-checkboxes-row {
-      display: flex;
-      align-items: center;
-      gap: 2rem;
-      width: 100%;
-      max-width: 600px;
-      margin: 0.5rem 0;
-      justify-content: flex-start;
-    }
-
-    .settings-credential-checkbox-item {
-      display: flex;
-      align-items: center;
-    }
-
-    .settings-credential-checkbox-label {
-      font-size: 1rem;
-      color: #374151;
-      cursor: pointer;
-      user-select: none;
-    }
-
-    /* Settings File Checkbox Layout */
-    .settings-file-checkbox-row {
-      display: flex;
-      align-items: center;
-      margin-top: 0.5rem;
-      justify-content: flex-start;
-    }
-
-    .settings-file-checkbox-label {
-      font-size: 1rem;
-      color: #374151;
-      cursor: pointer;
-      user-select: none;
-    }
-
-    /* Responsive adjustments for checkboxes */
-    @media (max-width: 900px) {
-      .settings-credentials-checkboxes-row {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 0.5rem;
-      }
-      
-      .settings-credential-checkbox-item {
-        width: 100%;
-      }
-    }
-
-    /* Custom scrollbar styles */
-    ::-webkit-scrollbar {
-      width: 12px;
-    }
-    
-    ::-webkit-scrollbar-track {
-      background: #f1f1f1;
-      border-radius: 6px;
-    }
-    
-    ::-webkit-scrollbar-thumb {
-      background: #e60028;
-      border-radius: 6px;
-    }
-    
-    ::-webkit-scrollbar-thumb:hover {
-      background: #b8001c;
-    }
-    
-    /* Info icon tooltip styles */
-    .info-icon {
-      display: inline-block;
-      width: 16px;
-      height: 16px;
-      background: #ffffff;
-      color: #0033a0;
-      border-radius: 50%;
-      text-align: center;
-      line-height: 16px;
-      font-size: 12px;
-      font-weight: bold;
-      cursor: help;
-      margin-left: 6px;
-      position: relative;
-      transition: all 0.2s;
-      border: 1.5px solid #0033a0;
-    }
-    
-    .info-icon:hover {
-      background: #f8fafc;
-      border-color: #002266;
-      color: #002266;
-      transform: scale(1.1);
-    }
-    
-    .info-icon::before {
-      content: "ℹ";
-      font-style: normal;
-    }
-    
-    .info-tooltip {
-      position: relative;
-      display: inline-block;
-    }
-    
-    .info-tooltip .tooltip-content {
-      visibility: hidden;
-      opacity: 0;
-      position: absolute;
-      bottom: 125%;
-      left: 50%;
-      transform: translateX(-50%);
-      background: white;
-      color: black;
-      padding: 8px 12px;
-      border-radius: 8px;
-      font-size: 0.9rem;
-      white-space: normal;
-      z-index: 1000;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      transition: opacity 0.2s, visibility 0.2s;
-      pointer-events: none;
-      max-width: 200px;
-      min-width: 120px;
-      text-align: center;
-      border: 1px solid #e5e7eb;
-      word-wrap: break-word;
-      overflow-wrap: break-word;
-    }
-    
-    .info-tooltip .tooltip-content::after {
-      content: "";
-      position: absolute;
-      top: 100%;
-      left: 50%;
-      margin-left: -5px;
-      border-width: 5px;
-      border-style: solid;
-      border-color: white transparent transparent transparent;
-    }
-    
-    .info-tooltip:hover .tooltip-content,
-    .info-tooltip:focus .tooltip-content {
-      visibility: visible;
-      opacity: 1;
-    }
-    
-    /* Mobile touch support */
-    @media (hover: none) and (pointer: coarse) {
-      .info-tooltip .tooltip-content {
-        display: none;
-      }
-      
-      .info-tooltip:active .tooltip-content {
-        display: block;
-        visibility: visible;
-        opacity: 1;
-      }
-    }
-    
-    /* Spinner animation */
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-    /* Custom tippy.js theme for PingOne */
-    .tippy-box[data-theme~='pingone'] {
-      background-color: #f2f2f2;
-      color: #22223b;
-      min-width: 140px;
-      max-width: 260px;
-      padding: 8px 12px;
-      font-size: 14px;
-      line-height: 1.6;
-      border-radius: 8px;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.10);
-      border: 1px solid #e5e7eb;
-      text-align: left;
-    }
-    .tippy-box[data-theme~='pingone'][data-placement^='top'] > .tippy-arrow::before {
-      border-top-color: #f2f2f2;
-    }
-    .tippy-box[data-theme~='pingone'][data-placement^='bottom'] > .tippy-arrow::before {
-      border-bottom-color: #f2f2f2;
-    }
-    .tippy-box[data-theme~='pingone'][data-placement^='left'] > .tippy-arrow::before {
-      border-left-color: #f2f2f2;
-    }
-    .tippy-box[data-theme~='pingone'][data-placement^='right'] > .tippy-arrow::before {
-      border-right-color: #f2f2f2;
-    }
-    
-    .settings-subsection {
-      background: #f8fafc;
-      border: 1.5px solid #cbd5e1;
-      border-radius: 12px;
-      padding: 1.5rem;
-      margin-bottom: 1.2rem;
-      width: 100%;
-      max-width: 900px;
-      box-sizing: border-box;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      margin-left: auto;
-      margin-right: auto;
-    }
-    
-    .settings-subsection-title {
-      display: flex;
-      align-items: center;
-      gap: 0.3em;
-      margin-bottom: 0.5rem;
-      font-size: 1.05rem;
-      font-weight: 500;
-      color: #374151;
-    }
-  </style>
+  <link rel="stylesheet" href="settings-styles.css">
   <!-- Add tippy.js CDN -->
   <link rel="stylesheet" href="https://unpkg.com/tippy.js@6/dist/tippy.css" />
   <script src="https://unpkg.com/@popperjs/core@2"></script>
   <script src="https://unpkg.com/tippy.js@6"></script>
-  <!-- Add PapaParse for CSV parsing - use local asset as primary, CDN as fallback -->
-  <script src="assets/papaparse.min.js"></script>
+  <!-- Add uDSV for CSV parsing - modern, lightweight alternative to Papa Parse -->
+  <script src="assets/uDSV.iife.min.js"></script>
   <script>
-    // Fallback to CDN if local Papa Parse fails to load
-    if (typeof Papa === 'undefined') {
-      const script = document.createElement('script');
-      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.5.3/papaparse.min.js';
-      script.onload = function() {
-        console.log('Papa Parse loaded from CDN fallback');
+    // Initialize uDSV as the primary CSV parser
+    if (typeof uDSV !== 'undefined') {
+      console.log('uDSV CSV parser loaded successfully');
+      // Make uDSV globally available as Papa for compatibility
+      window.Papa = {
+        parse: function(csvString, config) {
+          try {
+            // Use uDSV.parse for parsing CSV data
+            const result = uDSV.parse(csvString, {
+              header: config && config.header !== false,
+              skipEmptyLines: config && config.skipEmptyLines,
+              delimiter: config && config.delimiter || ',',
+              transform: config && config.transform,
+              transformHeader: config && config.transformHeader
+            });
+            
+            return {
+              data: result.data || [],
+              errors: result.errors || [],
+              meta: {
+                delimiter: result.delimiter || ',',
+                linebreak: '\n',
+                aborted: false,
+                fields: result.headers || [],
+                truncated: false
+              }
+            };
+          } catch (error) {
+            return {
+              data: [],
+              errors: [{
+                type: 'ParseError',
+                code: 'ParseError',
+                message: error.message,
+                row: 0
+              }],
+              meta: {
+                delimiter: ',',
+                linebreak: '\n',
+                aborted: false,
+                fields: [],
+                truncated: false
+              }
+            };
+          }
+        },
+        unparse: function(data, config) {
+          try {
+            return uDSV.stringify(data, {
+              header: config && config.header !== false,
+              delimiter: config && config.delimiter || ',',
+              quoteChar: config && config.quoteChar || '"',
+              escapeChar: config && config.escapeChar || '"'
+            });
+          } catch (error) {
+            console.error('uDSV unparse error:', error);
+            return '';
+          }
+        }
       };
-      script.onerror = function() {
-        console.error('Failed to load Papa Parse from both local and CDN sources');
-      };
-      document.head.appendChild(script);
     } else {
-      console.log('Papa Parse loaded from local asset');
+      console.error('uDSV CSV parser not available - this is required for CSV parsing functionality');
     }
   </script>
 </head>
@@ -1290,7 +227,7 @@
         <div class="settings-section">
           <div style="font-size:1.45rem;font-weight:700;color:#0033a0;margin-bottom:1.1rem;">Default CSV File</div>
           <div class="settings-subsection">
-            <div style="display:flex;flex-direction:column;align-items:center;gap:1rem;width:100%;max-width:600px;">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:1rem;width:100%;max-width:800px;">
               <div class="settings-subsection-title">
                 <span>Default CSV File</span>
                 <span class="info-icon" data-tippy-content="Set a default CSV file that will be automatically selected on the main page. This choice will be kept until changed here or in Main import page."></span>
@@ -2294,6 +1231,12 @@
         
         console.log('All settings cleared successfully');
       }
+      
+      saveFormState() {
+        this.formElements.forEach((_, elementId) => {
+          this.saveElement(elementId);
+        });
+      }
     }
 
     // Create global instance
@@ -2798,8 +1741,14 @@
         const rememberSecretCheckbox = document.getElementById('settingsRememberClientSecret');
         
         // Save checkbox states
-        localStorage.setItem('pingone_save_all_credentials', saveAllCredentialsCheckbox ? saveAllCredentialsCheckbox.checked.toString() : 'false');
-        localStorage.setItem('pingone_remember_client_secret', rememberSecretCheckbox ? rememberSecretCheckbox.checked.toString() : 'false');
+        localStorage.setItem(
+          'pingone_save_all_credentials',
+          saveAllCredentialsCheckbox && typeof saveAllCredentialsCheckbox.checked !== 'undefined' ? saveAllCredentialsCheckbox.checked.toString() : 'false'
+        );
+        localStorage.setItem(
+          'pingone_remember_client_secret',
+          rememberSecretCheckbox && typeof rememberSecretCheckbox.checked !== 'undefined' ? rememberSecretCheckbox.checked.toString() : 'false'
+        );
         
         // If "Save all credentials" is checked, save all three credentials regardless of validation
         if (saveAllCredentialsCheckbox && saveAllCredentialsCheckbox.checked) {
@@ -2949,16 +1898,18 @@
       sessionStorage.removeItem('temp_csv_file_name');
       
       // Clear form fields
-      document.getElementById('settingsEnvId').value = ''; 
-      document.getElementById('settingsClientId').value = '';
-      document.getElementById('settingsClientSecret').value = '';
-      document.getElementById('settingsLanguage').value = 'en';
-      document.getElementById('settingsResultsPageSize').value = '10';
-      document.getElementById('settingsApiBaseUrl').value = '';
-      document.getElementById('settingsDefaultFile').value = '';
-      document.getElementById('defaultFileInfo').style.display = 'none';
-      document.getElementById('defaultFileName').textContent = '';
-      document.getElementById('defaultFileSize').textContent = '';
+      if (document.getElementById('settingsEnvId')) document.getElementById('settingsEnvId').value = '';
+      if (document.getElementById('settingsClientId')) document.getElementById('settingsClientId').value = '';
+      if (document.getElementById('settingsClientSecret')) document.getElementById('settingsClientSecret').value = '';
+      if (document.getElementById('settingsLanguage')) document.getElementById('settingsLanguage').value = 'en';
+      if (document.getElementById('settingsResultsPageSize')) document.getElementById('settingsResultsPageSize').value = '10';
+      if (document.getElementById('settingsApiBaseUrl')) document.getElementById('settingsApiBaseUrl').value = '';
+      if (document.getElementById('settingsDefaultFile')) document.getElementById('settingsDefaultFile').value = '';
+      if (document.getElementById('defaultFileName')) document.getElementById('defaultFileName').textContent = '';
+      // Remove reference to defaultFileInfo and defaultFileSize as they do not exist
+      // if (document.getElementById('defaultFileInfo')) document.getElementById('defaultFileInfo').style.display = 'none';
+      // if (document.getElementById('defaultFileSize')) document.getElementById('defaultFileSize').textContent = '';
+      // ... existing code ...
       
       // Clear checkboxes
       document.querySelectorAll('.red-checkbox').forEach(cb => {
@@ -3286,9 +2237,12 @@
     // Listen for storage events to sync file names across tabs/windows
     window.addEventListener('storage', function(e) {
       if (e.key === 'pingone_default_csv_file' || e.key === 'temp_csv_file_name') {
-        if (settingsFormPersistence) {
+        if (settingsFormPersistence && typeof settingsFormPersistence.restoreFileName === 'function') {
           settingsFormPersistence.restoreFileName();
         }
+      }
+      if (e.key && e.key.startsWith('pingone_')) {
+        window.location.reload();
       }
     });
 
@@ -3432,25 +2386,33 @@
           return;
         }
         
-        // Check if Papa Parse is available
-        if (typeof Papa === 'undefined') {
-          console.warn('Papa Parse library not loaded, cannot count CSV rows');
+        // Check if uDSV is available
+        if (typeof uDSV === 'undefined') {
+          console.warn('uDSV library not loaded, cannot count CSV rows');
           resolve(0); // Return 0 as fallback
           return;
         }
         
-        Papa.parse(file, {
-          header: true, // Treat first row as header
-          skipEmptyLines: true,
-          complete: function(results) {
-            const rowCount = results.data.length;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          try {
+            const csvString = e.target.result;
+            const result = uDSV.parse(csvString, {
+              header: true,
+              skipEmptyLines: true
+            });
+            const rowCount = result.data ? result.data.length : 0;
             resolve(rowCount);
-          },
-          error: function(error) {
+          } catch (error) {
             console.error('Error parsing CSV for row count:', error);
             reject(error);
           }
-        });
+        };
+        reader.onerror = function(error) {
+          console.error('Error reading file for row count:', error);
+          reject(error);
+        };
+        reader.readAsText(file);
       });
     }
     
