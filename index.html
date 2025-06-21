@@ -1137,10 +1137,10 @@
             margin-bottom: 1rem;
           ">Please wait while we process your request</div>
           <div id="modalProgress" style="
-            font-size: 0.95rem;
-            color: #0033a0;
-            font-weight: 500;
+            font-size: 0.9rem;
+            color: #9ca3af;
           "></div>
+          <button id="modalCancelBtn" style="display: none;">Cancel</button>
       </div>
     </div>
       
@@ -2041,6 +2041,9 @@
       
       showSpinnerModal('Import', globalCSVRowCount);
       
+      // Show worker token status at the start
+      showWorkerTokenStatus();
+      
       // Use the global actionStatus instance
       actionStatus.reset();
       actionStatus.showProgress('Import', globalCSVRowCount);
@@ -2083,6 +2086,8 @@
                   if (data.progress === 'started') {
                     totalItems = data.total;
                     currentProcessedCount = 0;
+                    // Update worker token status to success when operation starts
+                    updateWorkerTokenSuccess();
                     updateSpinnerProgress(0, totalItems, 0, false, false);
                   } else if (data.progress === 'processing') {
                     currentProcessedCount = data.processed;
@@ -2136,10 +2141,20 @@
         }
       } catch (error) {
         console.error('Upload error:', error);
-        actionStatus.showError([`Upload failed: ${error.message}`]);
-        if (statusSpan) {
-          statusSpan.textContent = `❌ Upload failed: ${error.message}. Please check your CSV file format and user data.`;
-          statusSpan.style.color = '#dc2626';
+        
+        // Check if this is a 429 error and handle it specially
+        if (is429Error(error)) {
+          handle429Error(error, 'Import');
+        } else {
+          // Update worker token status to error if it's a token-related error
+          if (error.message.includes('token') || error.message.includes('authentication') || error.message.includes('credentials')) {
+            updateWorkerTokenError();
+          }
+          actionStatus.showError([`Upload failed: ${error.message}`]);
+          if (statusSpan) {
+            statusSpan.textContent = `❌ Upload failed: ${error.message}. Please check your CSV file format and user data.`;
+            statusSpan.style.color = '#dc2626';
+          }
         }
       } finally {
         importBtn.disabled = false;
@@ -2193,6 +2208,9 @@
       
       showSpinnerModal('Delete', globalCSVRowCount);
       
+      // Show worker token status at the start
+      showWorkerTokenStatus();
+      
       // Use the global actionStatus instance
       actionStatus.reset();
       actionStatus.showProgress('Delete', globalCSVRowCount);
@@ -2236,6 +2254,8 @@
                   if (data.progress === 'started') {
                     totalItems = data.total;
                     currentProcessedCount = 0;
+                    // Update worker token status to success when operation starts
+                    updateWorkerTokenSuccess();
                     updateSpinnerProgress(0, totalItems, 0, false, false);
                   } else if (data.progress === 'processing') {
                     currentProcessedCount = data.processed;
@@ -2290,10 +2310,20 @@
         }
       } catch (error) {
         console.error('Delete error:', error);
-        actionStatus.showError([`Delete failed: ${error.message}`]);
-        if (statusSpan) {
-          statusSpan.textContent = `❌ Delete failed: ${error.message}. Please check your CSV file format and user data.`;
-          statusSpan.style.color = '#dc2626';
+        
+        // Check if this is a 429 error and handle it specially
+        if (is429Error(error)) {
+          handle429Error(error, 'Delete');
+        } else {
+          // Update worker token status to error if it's a token-related error
+          if (error.message.includes('token') || error.message.includes('authentication') || error.message.includes('credentials')) {
+            updateWorkerTokenError();
+          }
+          actionStatus.showError([`Delete failed: ${error.message}`]);
+          if (statusSpan) {
+            statusSpan.textContent = `❌ Delete failed: ${error.message}. Please check your CSV file format and user data.`;
+            statusSpan.style.color = '#dc2626';
+          }
         }
       } finally {
         deleteBtn.disabled = false;
@@ -2611,6 +2641,51 @@
       modal.style.display = 'block';
     }
     
+    // Worker Token Status Functions
+    function showWorkerTokenStatus() {
+      const workerTokenStatus = document.getElementById('workerTokenStatus');
+      const workerTokenText = document.getElementById('workerTokenText');
+      
+      if (workerTokenStatus && workerTokenText) {
+        workerTokenText.textContent = 'Getting Worker Token...';
+        workerTokenStatus.style.display = 'block';
+        workerTokenStatus.style.color = '#16a34a';
+        workerTokenStatus.style.background = '#f0fdf4';
+        workerTokenStatus.style.borderColor = '#bbf7d0';
+      }
+    }
+    
+    function updateWorkerTokenSuccess() {
+      const workerTokenStatus = document.getElementById('workerTokenStatus');
+      const workerTokenText = document.getElementById('workerTokenText');
+      
+      if (workerTokenStatus && workerTokenText) {
+        workerTokenText.textContent = 'Getting Worker Token ✅';
+        workerTokenStatus.style.color = '#16a34a';
+        workerTokenStatus.style.background = '#f0fdf4';
+        workerTokenStatus.style.borderColor = '#bbf7d0';
+      }
+    }
+    
+    function updateWorkerTokenError() {
+      const workerTokenStatus = document.getElementById('workerTokenStatus');
+      const workerTokenText = document.getElementById('workerTokenText');
+      
+      if (workerTokenStatus && workerTokenText) {
+        workerTokenText.textContent = 'Failed to retrieve Worker Token ❌';
+        workerTokenStatus.style.color = '#dc2626';
+        workerTokenStatus.style.background = '#fef2f2';
+        workerTokenStatus.style.borderColor = '#fecaca';
+      }
+    }
+    
+    function hideWorkerTokenStatus() {
+      const workerTokenStatus = document.getElementById('workerTokenStatus');
+      if (workerTokenStatus) {
+        workerTokenStatus.style.display = 'none';
+      }
+    }
+    
     function updateSpinnerProgress(completed, total, batchCounter = 0, summary = false, isComplete = false) {
       const progress = document.getElementById('modalProgress');
       if (progress && total > 0) {
@@ -2634,6 +2709,8 @@
       if (modal) {
         modal.style.display = 'none';
       }
+      // Also hide worker token status when hiding spinner
+      hideWorkerTokenStatus();
     }
 
     // Test function to verify status box functionality
@@ -3272,6 +3349,9 @@
       
       showSpinnerModal('Modify', globalCSVRowCount);
       
+      // Show worker token status at the start
+      showWorkerTokenStatus();
+      
       // Use the global actionStatus instance
       actionStatus.reset();
       actionStatus.showProgress('Modify', globalCSVRowCount);
@@ -3313,6 +3393,11 @@
                     currentProcessedCount = data.processed;
                     finalProcessedCount = currentProcessedCount;
                     lastProcessedCount = currentProcessedCount;
+                    
+                    // Update worker token status to success when operation starts
+                    if (currentProcessedCount === 0) {
+                      updateWorkerTokenSuccess();
+                    }
                     
                     actionStatus.updateProgress(currentProcessedCount, totalItems);
                   }
@@ -3361,10 +3446,20 @@
         }
       } catch (error) {
         console.error('Modify error:', error);
-        actionStatus.showError([`Modify failed: ${error.message}`]);
-        if (statusSpan) {
-          statusSpan.textContent = `❌ Modify failed: ${error.message}. Please check your CSV file format and user data.`;
-          statusSpan.style.color = '#dc2626';
+        
+        // Check if this is a 429 error and handle it specially
+        if (is429Error(error)) {
+          handle429Error(error, 'Modify');
+        } else {
+          // Update worker token status to error if it's a token-related error
+          if (error.message.includes('token') || error.message.includes('authentication') || error.message.includes('credentials')) {
+            updateWorkerTokenError();
+          }
+          actionStatus.showError([`Modify failed: ${error.message}`]);
+          if (statusSpan) {
+            statusSpan.textContent = `❌ Modify failed: ${error.message}. Please check your CSV file format and user data.`;
+            statusSpan.style.color = '#dc2626';
+          }
         }
       } finally {
         modifyBtn.disabled = false;
@@ -3375,6 +3470,76 @@
 
     // Global variable to store CSV row count
     let globalCSVRowCount = 0;
+    
+    // Function to handle 429 (Too Many Requests) errors gracefully
+    function handle429Error(error, operation) {
+      console.error(`${operation} error (429):`, error);
+      
+      // Update worker token status to error
+      updateWorkerTokenError();
+      
+      // Show rate limit warning
+      showRateLimitWarning();
+      
+      // Create user-friendly error message
+      const errorMessage = `⚠️ Rate limit exceeded. The server is temporarily limiting requests to prevent overload. Please wait a moment and try again.`;
+      
+      // Show error in action status
+      actionStatus.showError([errorMessage]);
+      
+      // Update status span with detailed message
+      const statusSpan = document.getElementById('actionStatusText') || document.getElementById('credentialsStatusText');
+      if (statusSpan) {
+        statusSpan.innerHTML = `
+          <div style="color: #dc2626; margin-bottom: 0.5rem;">
+            ❌ ${operation} failed: Rate limit exceeded
+          </div>
+          <div style="color: #6b7280; font-size: 0.9rem; margin-bottom: 0.5rem;">
+            The server is temporarily limiting requests to prevent overload.
+          </div>
+          <div style="color: #059669; font-size: 0.85rem;">
+            💡 <strong>What to do:</strong> Wait 30-60 seconds and try again, or reduce the number of users in your CSV file.
+          </div>
+        `;
+        statusSpan.style.color = '#dc2626';
+      }
+      
+      // Show a user-friendly popup
+      unifiedPopup.alert(
+        `Rate limit exceeded. Please wait a moment and try again.\n\nThis usually happens when:\n• Processing large CSV files\n• Making multiple requests quickly\n• Server is under high load\n\nTry again in 30-60 seconds.`,
+        'Rate Limit Exceeded'
+      );
+    }
+    
+    // Function to check if an error is a 429 error
+    function is429Error(error) {
+      return error.message && (
+        error.message.includes('429') || 
+        error.message.includes('Too Many Requests') ||
+        error.message.includes('rate limit')
+      );
+    }
+    
+    // Function to show rate limit warning
+    function showRateLimitWarning() {
+      const rateLimitWarning = document.getElementById('rateLimitWarning');
+      if (rateLimitWarning) {
+        rateLimitWarning.style.display = 'flex';
+        
+        // Auto-hide after 60 seconds
+        setTimeout(() => {
+          hideRateLimitWarning();
+        }, 60000);
+      }
+    }
+    
+    // Function to hide rate limit warning
+    function hideRateLimitWarning() {
+      const rateLimitWarning = document.getElementById('rateLimitWarning');
+      if (rateLimitWarning) {
+        rateLimitWarning.style.display = 'none';
+      }
+    }
     
     // Function to count CSV rows and update status
     async function countCSVRows(file) {

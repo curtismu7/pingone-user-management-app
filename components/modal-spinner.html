@@ -32,6 +32,22 @@
       animation: spin 1s linear infinite;
       margin: 0 auto 1.5rem auto;
     "></div>
+    
+    <!-- Worker Token Status Indicator -->
+    <div id="workerTokenStatus" style="
+      font-size: 0.9rem;
+      color: #16a34a;
+      font-weight: 500;
+      margin-bottom: 1rem;
+      padding: 0.5rem;
+      border-radius: 6px;
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      display: none;
+    ">
+      <span id="workerTokenText">Getting Worker Token...</span>
+    </div>
+    
     <div id="modalTitle" style="
       font-size: 1.3rem;
       font-weight: 600;
@@ -47,5 +63,20 @@
       font-size: 0.9rem;
       color: #9ca3af;
     "></div>
+    
+    <!-- Cancel Button -->
+    <button id="modalCancelBtn" style="
+      margin-top: 1.2rem;
+      background: #fff;
+      color: #e60028;
+      border: 1.5px solid #e60028;
+      border-radius: 6px;
+      padding: 0.5rem 1.2rem;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: none;
+      transition: background 0.2s, color 0.2s;
+    " type="button">Cancel</button>
   </div>
 </div> 
