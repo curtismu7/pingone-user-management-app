@@ -581,42 +581,10 @@ const actionStatus = {
 
 // Credential validation functions
 async function validateCredentials() {
-  // Check if we have stored credentials
-  const environmentId = localStorage.getItem('pingone_env_id');
-  const clientId = localStorage.getItem('pingone_client_id');
-  const clientSecret = localStorage.getItem('pingone_client_secret');
-  
-  if (!environmentId || !clientId || !clientSecret) {
-    updateCredentialsStatus('Missing credentials', '#dc2626');
-    return false;
-  }
-  
-  // Check if we have a valid token using the global tokenManager
-  if (!window.tokenManager) {
-    // Initialize token manager if not available
-    if (typeof TokenManager !== 'undefined') {
-      window.tokenManager = new TokenManager();
-    } else {
-      updateCredentialsStatus('Token manager not available', '#dc2626');
-      return false;
-    }
-  }
-  
-  try {
-    const token = await window.tokenManager.getValidToken();
-    
-    if (!token) {
-      updateCredentialsStatus('Invalid credentials', '#dc2626');
-      return false;
-    }
-    
-    updateCredentialsStatus('Using saved credentials', '#16a34a');
-    return true;
-  } catch (error) {
-    console.error('Credential validation error:', error);
-    updateCredentialsStatus('Credential validation failed', '#dc2626');
-    return false;
-  }
+  // For now, return false since token manager was removed
+  // This can be reimplemented later if needed
+  console.warn('Token manager not available, skipping validation');
+  return false;
 }
 
 function updateCredentialsStatus(message, color) {

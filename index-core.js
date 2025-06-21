@@ -301,15 +301,15 @@ window.indexCore = {
 
 // Global functions for HTML onclick handlers
 window.uploadCSV = function() {
-  performAction('import');
+  performAction('Import');
 };
 
 window.deleteCSVUsers = function() {
-  performAction('delete');
+  performAction('Delete');
 };
 
 window.modifyCSVUsers = function() {
-  performAction('modify');
+  performAction('Modify');
 };
 
 // Make other essential functions globally available
@@ -330,18 +330,23 @@ window.showSuccess = function(message) {
 };
 
 // Initialize UI functions globally
-window.indexUI = {
-  showError: showError,
-  showSuccess: showSuccess,
-  showInfo: showInfo,
-  showNotification: showNotification,
-  showModal: showModal,
-  hideModal: hideModal,
-  showActionStatus: showActionStatus,
-  hideActionStatus: hideActionStatus,
-  updateActionProgress: updateActionProgress,
-  showActionComplete: showActionComplete
-};
+function initializeGlobalUI() {
+  window.indexUI = {
+    showError: typeof showError !== 'undefined' ? showError : function(msg) { console.log('Error:', msg); },
+    showSuccess: typeof showSuccess !== 'undefined' ? showSuccess : function(msg) { console.log('Success:', msg); },
+    showInfo: typeof showInfo !== 'undefined' ? showInfo : function(msg) { console.log('Info:', msg); },
+    showNotification: typeof showNotification !== 'undefined' ? showNotification : function(msg, type) { console.log('Notification:', msg, type); },
+    showModal: typeof showModal !== 'undefined' ? showModal : function(title, content, buttons) { console.log('Modal:', title, content); },
+    hideModal: typeof hideModal !== 'undefined' ? hideModal : function() { console.log('Hide modal'); },
+    showActionStatus: typeof showActionStatus !== 'undefined' ? showActionStatus : function(actionType) { console.log('Action status:', actionType); },
+    hideActionStatus: typeof hideActionStatus !== 'undefined' ? hideActionStatus : function() { console.log('Hide action status'); },
+    updateActionProgress: typeof updateActionProgress !== 'undefined' ? updateActionProgress : function(progress, total, actionType) { console.log('Progress:', progress, total, actionType); },
+    showActionComplete: typeof showActionComplete !== 'undefined' ? showActionComplete : function(success, message) { console.log('Action complete:', success, message); }
+  };
+}
+
+// Initialize when DOM is loaded
+document.addEventListener('DOMContentLoaded', initializeGlobalUI);
 
 // Comprehensive Form Persistence System
 class FormPersistence {
