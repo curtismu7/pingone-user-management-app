@@ -619,16 +619,19 @@
       border-radius: 6px;
       font-size: 0.875rem;
       line-height: 1.4;
-      white-space: nowrap;
+      white-space: normal;
       z-index: 1000;
       opacity: 0;
       visibility: hidden;
       transition: opacity 0.2s, visibility 0.2s;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
       pointer-events: none;
-      max-width: 280px;
+      max-width: 200px;
+      min-width: 120px;
       text-align: center;
       border: 1px solid #e5e7eb;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
     }
 
     .custom-tooltip .tooltip-content::after {
@@ -650,8 +653,11 @@
     @media (max-width: 768px) {
       .custom-tooltip .tooltip-content {
         white-space: normal;
-        max-width: 200px;
+        max-width: 180px;
+        min-width: 100px;
         font-size: 0.8rem;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
       }
     }
 
@@ -672,11 +678,15 @@
       padding: 6px 10px;
       border-radius: 4px;
       font-size: 0.8rem;
-      white-space: nowrap;
+      white-space: normal;
       z-index: 1000;
       margin-bottom: 5px;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
       border: 1px solid #e5e7eb;
+      max-width: 180px;
+      min-width: 100px;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
     }
 
     .enhanced-input:hover::before,
@@ -707,11 +717,15 @@
       padding: 6px 10px;
       border-radius: 4px;
       font-size: 0.8rem;
-      white-space: nowrap;
+      white-space: normal;
       z-index: 1000;
       margin-bottom: 5px;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
       border: 1px solid #e5e7eb;
+      max-width: 180px;
+      min-width: 100px;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
     }
 
     .button-tooltip:hover::before {
@@ -788,15 +802,17 @@
       padding: 8px 12px;
       border-radius: 8px;
       font-size: 0.9rem;
-      white-space: nowrap;
+      white-space: normal;
       z-index: 1000;
       box-shadow: 0 4px 12px rgba(0,0,0,0.15);
       transition: opacity 0.2s, visibility 0.2s;
       pointer-events: none;
-      max-width: 250px;
-      white-space: normal;
+      max-width: 200px;
+      min-width: 120px;
       text-align: center;
       border: 1px solid #e5e7eb;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
     }
     
     .info-tooltip .tooltip-content::after {
@@ -925,9 +941,9 @@
         <div class="credential-row">
           <label for="envIdInput" class="credential-label">
             Environment ID
-            <span class="custom-tooltip" data-tooltip="Enter the Environment ID from your PingOne environment. This is a UUID that identifies your specific PingOne environment.">
+            <span class="custom-tooltip" data-tooltip="Enter your PingOne Environment ID UUID">
               <span class="tooltip-icon">i</span>
-              <span class="tooltip-content">Enter the Environment ID from your PingOne environment. This is a UUID that identifies your specific PingOne environment.</span>
+              <span class="tooltip-content">Enter your PingOne Environment ID UUID</span>
             </span>
           </label>
           <input type="text" id="envIdInput" placeholder="Enter Environment ID" class="credential-input enhanced-input" data-tooltip="Your PingOne Environment ID (e.g. 7853c888-ad7d-470c-add6-597397698767)" />
@@ -936,9 +952,9 @@
         <div class="credential-row">
           <label for="clientIdInput" class="credential-label">
             Client ID
-            <span class="custom-tooltip" data-tooltip="Enter the Client ID from your PingOne Worker App credentials. This must be from a worker application in your target environment.">
+            <span class="custom-tooltip" data-tooltip="Enter your PingOne Worker App Client ID">
               <span class="tooltip-icon">i</span>
-              <span class="tooltip-content">Enter the Client ID from your PingOne Worker App credentials. This must be from a worker application in your target environment.</span>
+              <span class="tooltip-content">Enter your PingOne Worker App Client ID</span>
             </span>
           </label>
           <input type="text" id="clientIdInput" placeholder="Enter Client ID" class="credential-input enhanced-input" data-tooltip="Your PingOne Client ID from the worker application" />
@@ -947,9 +963,9 @@
         <div class="credential-row">
           <label for="clientSecretInput" class="credential-label">
             Client Secret
-            <span class="custom-tooltip" data-tooltip="Enter the Client Secret from your PingOne Worker App credentials. This must be from a worker application in your target environment.">
+            <span class="custom-tooltip" data-tooltip="Enter your PingOne Worker App Client Secret">
               <span class="tooltip-icon">i</span>
-              <span class="tooltip-content">Enter the Client Secret from your PingOne Worker App credentials. This must be from a worker application in your target environment.</span>
+              <span class="tooltip-content">Enter your PingOne Worker App Client Secret</span>
             </span>
           </label>
           <div style="position:relative;width:100%;max-width:350px;grid-column:2;">
@@ -988,10 +1004,10 @@
         
         <!-- Test Credentials button -->
         <div style="margin: 1rem 0; text-align: center; width: 100%;">
-          <button id="testCredentialsBtn" onclick="testCredentials()" class="unified-button button-tooltip" data-tooltip="Test your PingOne credentials to verify they are valid and working">
+          <button id="testCredentialsBtn" onclick="testCredentials()" class="unified-button button-tooltip" data-tooltip="Test your PingOne credentials">
             Test Credentials
           </button>
-          <button onclick="loadTestCredentials()" class="unified-button button-tooltip" style="background: #6b7280; margin-left: 0.5rem;" onmouseover="this.style.background='#4b5563'" onmouseout="this.style.background='#6b7280'" data-tooltip="Load sample test credentials for demonstration purposes">
+          <button onclick="loadTestCredentials()" class="unified-button button-tooltip" style="background: #6b7280; margin-left: 0.5rem;" onmouseover="this.style.background='#4b5563'" onmouseout="this.style.background='#6b7280'" data-tooltip="Load sample test credentials">
             Load Test Credentials
           </button>
           <span id="credentialsStatus" style="
@@ -1007,9 +1023,9 @@
       <div class="file-section">
         <div class="credentials-title" style="margin-bottom:1.2rem;">Actions</div>
         <div class="file-input-container">
-          <input type="file" id="csvFile" accept=".csv" style="color:#e60028;" class="enhanced-input" data-tooltip="Select a CSV file containing user data to import, modify, or delete" />
+          <input type="file" id="csvFile" accept=".csv" style="color:#e60028;" class="enhanced-input" data-tooltip="Select CSV file with user data" />
           <div class="file-checkbox-row">
-            <input type="checkbox" id="saveFileNameCheckbox" class="unified-checkbox enhanced-input" data-tooltip="Save the selected file name to browser storage for future sessions" />
+            <input type="checkbox" id="saveFileNameCheckbox" class="unified-checkbox enhanced-input" data-tooltip="Save file name to browser storage" />
             <label for="saveFileNameCheckbox" class="file-checkbox-label">
               Save file name
               <span class="info-tooltip">
@@ -1050,12 +1066,12 @@
         
         <!-- Main action buttons -->
         <div class="button-row">
-          <button class="unified-button button-tooltip" onclick="uploadCSV()" id="importUsersBtn" data-tooltip="Import users from the selected CSV file into your PingOne environment">Import Users</button>
-          <button class="unified-button button-tooltip" onclick="deleteCSVUsers()" id="deleteUsersBtn" data-tooltip="Delete all users listed in the selected CSV file from your PingOne environment">Delete Users</button>
-          <button class="unified-button button-tooltip" onclick="modifyCSVUsers()" id="modifyUsersBtn" data-tooltip="Modify existing users in your PingOne environment using data from the selected CSV file">Modify Users</button>
-          <button class="unified-button button-tooltip" onclick="window.open('settings.html', '_blank')" id="settingsBtn" data-tooltip="Open settings page to configure default values and preferences">Settings</button>
-          <button class="unified-button button-tooltip" onclick="testStatusBox()" style="background: #6b7280;" onmouseover="this.style.background='#4b5563'" onmouseout="this.style.background='#6b7280'" data-tooltip="Test the status box functionality and spinner display">Test Status Box</button>
-          <button class="unified-button button-tooltip" onclick="clearAllSettings()" style="background: #dc2626;" onmouseover="this.style.background='#b91c1c'" onmouseout="this.style.background='#dc2626'" data-tooltip="Clear all saved settings, credentials, and file selections">Clear All Settings</button>
+          <button class="unified-button button-tooltip" onclick="uploadCSV()" id="importUsersBtn" data-tooltip="Import users from CSV file">Import Users</button>
+          <button class="unified-button button-tooltip" onclick="deleteCSVUsers()" id="deleteUsersBtn" data-tooltip="Delete users from CSV file">Delete Users</button>
+          <button class="unified-button button-tooltip" onclick="modifyCSVUsers()" id="modifyUsersBtn" data-tooltip="Modify users from CSV file">Modify Users</button>
+          <button class="unified-button button-tooltip" onclick="window.open('settings.html', '_blank')" id="settingsBtn" data-tooltip="Open settings page">Settings</button>
+          <button class="unified-button button-tooltip" onclick="testStatusBox()" style="background: #6b7280;" onmouseover="this.style.background='#4b5563'" onmouseout="this.style.background='#6b7280'" data-tooltip="Test status box functionality">Test Status Box</button>
+          <button class="unified-button button-tooltip" onclick="clearAllSettings()" style="background: #dc2626;" onmouseover="this.style.background='#b91c1c'" onmouseout="this.style.background='#dc2626'" data-tooltip="Clear all saved settings">Clear All Settings</button>
         </div>
       </div>
       
