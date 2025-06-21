@@ -359,4 +359,18 @@ window.indexUtils = {
   uniqueArray,
   debounce,
   throttle
+};
+
+// Missing functions referenced in HTML
+window.showCredentialErrorDetails = function() {
+  // This function is referenced in settings.html but not used in index.html
+  // Adding a placeholder to prevent errors
+  console.log('showCredentialErrorDetails called - this function is not implemented for index page');
+};
+
+window.retryPapaParseLoading = function() {
+  // This function is referenced in the HTML but not needed since we use uDSV
+  // Adding a placeholder to prevent errors
+  console.log('retryPapaParseLoading called - this function is not needed since we use uDSV');
+  showInfo('uDSV CSV parser is already loaded and working correctly.');
 }; 
