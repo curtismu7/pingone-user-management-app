@@ -1594,7 +1594,7 @@
       updateCredentialStatus(message, color) {
         const statusSpan = document.getElementById('credentialsStatus');
         if (statusSpan) {
-          statusSpan.textContent = message;
+          statusSpan.innerHTML = message;
           statusSpan.style.color = color;
         }
       }
