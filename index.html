@@ -337,6 +337,31 @@
       width: 100%;
       max-width: 350px;
     }
+    
+    .file-input-container input[type="file"] {
+      height: 2.5rem;
+      font-size: 1rem;
+      padding: 0.5rem 0.8rem;
+      border-radius: 6px;
+      border: 1px solid #cbd5e1;
+      background: #f3f4f6;
+      box-sizing: border-box;
+      width: 100%;
+      color: #e60028;
+      cursor: pointer;
+      transition: border-color 0.2s, background-color 0.2s;
+    }
+    
+    .file-input-container input[type="file"]:hover {
+      border-color: #e60028;
+      background: #f8fafc;
+    }
+    
+    .file-input-container input[type="file"]:focus {
+      outline: none;
+      border-color: #e60028;
+      box-shadow: 0 0 0 2px rgba(230, 0, 40, 0.1);
+    }
 
     .file-checkbox-row {
       display: flex;
@@ -1023,7 +1048,7 @@
       <div class="file-section">
         <div class="credentials-title" style="margin-bottom:1.2rem;">Actions</div>
         <div class="file-input-container">
-          <input type="file" id="csvFile" accept=".csv" style="color:#e60028;" class="enhanced-input" data-tooltip="Select CSV file with user data" />
+          <input type="file" id="csvFile" accept=".csv" class="enhanced-input" data-tooltip="Select CSV file with user data" />
           <div class="file-checkbox-row">
             <input type="checkbox" id="saveFileNameCheckbox" class="unified-checkbox enhanced-input" data-tooltip="Save file name to browser storage" />
             <label for="saveFileNameCheckbox" class="file-checkbox-label">
