@@ -109,6 +109,9 @@ class ComponentLoader {
     
     // Initialize tooltips
     this.initializeTooltips();
+    
+    // Initialize action buttons with proper event listeners
+    this.initializeActionButtons();
   }
 
   /**
@@ -225,6 +228,76 @@ class ComponentLoader {
         selectedFileNameDisplay.style.display = 'none';
         localStorage.removeItem('selectedFileName');
       });
+    }
+  }
+
+  /**
+   * Initialize action buttons with event listeners
+   */
+  initializeActionButtons() {
+    console.log('Initializing action buttons...');
+    
+    // Import Users button
+    const importBtn = document.getElementById('importUsersBtn');
+    if (importBtn) {
+      console.log('Found import button, attaching event listener');
+      importBtn.addEventListener('click', () => {
+        console.log('Import button clicked');
+        if (typeof window.uploadCSV === 'function') {
+          window.uploadCSV();
+        } else {
+          console.error('uploadCSV function not found');
+          alert('Import functionality not available');
+        }
+      });
+    } else {
+      console.warn('Import button not found');
+    }
+
+    // Delete Users button
+    const deleteBtn = document.getElementById('deleteUsersBtn');
+    if (deleteBtn) {
+      console.log('Found delete button, attaching event listener');
+      deleteBtn.addEventListener('click', () => {
+        console.log('Delete button clicked');
+        if (typeof window.deleteCSVUsers === 'function') {
+          window.deleteCSVUsers();
+        } else {
+          console.error('deleteCSVUsers function not found');
+          alert('Delete functionality not available');
+        }
+      });
+    } else {
+      console.warn('Delete button not found');
+    }
+
+    // Modify Users button
+    const modifyBtn = document.getElementById('modifyUsersBtn');
+    if (modifyBtn) {
+      console.log('Found modify button, attaching event listener');
+      modifyBtn.addEventListener('click', () => {
+        console.log('Modify button clicked');
+        if (typeof window.modifyCSVUsers === 'function') {
+          window.modifyCSVUsers();
+        } else {
+          console.error('modifyCSVUsers function not found');
+          alert('Modify functionality not available');
+        }
+      });
+    } else {
+      console.warn('Modify button not found');
+    }
+
+    // Settings button
+    const settingsBtn = document.getElementById('settingsBtn');
+    if (settingsBtn) {
+      console.log('Found settings button, attaching event listener');
+      settingsBtn.addEventListener('click', () => {
+        console.log('Settings button clicked');
+        window.open('settings.html', '_blank');
+      });
+    } else {
+      console.warn('Settings button not found');
     }
   }
 

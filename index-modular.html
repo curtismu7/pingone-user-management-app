@@ -689,23 +689,68 @@
       }
     }
 
+    // Spinner control functions
+    function showSpinner(title = 'Processing...', subtitle = 'Please wait while we process your request') {
+      const spinnerModal = document.getElementById('spinnerModal');
+      const modalTitle = document.getElementById('modalTitle');
+      const modalSubtitle = document.getElementById('modalSubtitle');
+      if (spinnerModal) {
+        spinnerModal.style.display = 'block';
+        if (modalTitle) modalTitle.textContent = title;
+        if (modalSubtitle) modalSubtitle.textContent = subtitle;
+      }
+    }
+    function hideSpinner() {
+      const spinnerModal = document.getElementById('spinnerModal');
+      if (spinnerModal) spinnerModal.style.display = 'none';
+    }
+
     // Placeholder functions for the main application logic
     // These would be implemented based on your existing functionality
     
-    function uploadCSV() {
-      console.log('Upload CSV function called');
-      // Implement CSV upload logic
+    async function uploadCSV() {
+      showSpinner('Importing Users...', 'Validating and importing users from CSV.');
+      try {
+        console.log('Upload CSV function called');
+        // Implement CSV upload logic (async)
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate async work
+      } catch (err) {
+        console.error(err);
+      } finally {
+        hideSpinner();
+      }
     }
     
-    function deleteCSVUsers() {
-      console.log('Delete CSV users function called');
-      // Implement delete users logic
+    async function deleteCSVUsers() {
+      showSpinner('Deleting Users...', 'Validating and deleting users from CSV.');
+      try {
+        console.log('Delete CSV users function called');
+        // Implement delete users logic (async)
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate async work
+      } catch (err) {
+        console.error(err);
+      } finally {
+        hideSpinner();
+      }
     }
     
-    function modifyCSVUsers() {
-      console.log('Modify CSV users function called');
-      // Implement modify users logic
+    async function modifyCSVUsers() {
+      showSpinner('Modifying Users...', 'Validating and modifying users from CSV.');
+      try {
+        console.log('Modify CSV users function called');
+        // Implement modify users logic (async)
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate async work
+      } catch (err) {
+        console.error(err);
+      } finally {
+        hideSpinner();
+      }
     }
+
+    // Make functions available globally for component loader
+    window.uploadCSV = uploadCSV;
+    window.deleteCSVUsers = deleteCSVUsers;
+    window.modifyCSVUsers = modifyCSVUsers;
   </script>
 </body>
 </html> 
