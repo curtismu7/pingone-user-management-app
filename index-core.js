@@ -201,7 +201,11 @@ function cancelOperation() {
   cancelRequested = true;
   fetch('/cancel', { method: 'POST' });
   hideActionStatus();
-  showInfo('Operation cancelled.');
+  if (typeof showInfo === 'function') {
+    showInfo('Operation cancelled.');
+  } else {
+    alert('Operation cancelled.');
+  }
 }
 
 // Credential management
