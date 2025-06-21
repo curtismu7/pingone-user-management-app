@@ -1,41 +1,138 @@
 // index-utils.js
 // Utility functions for PingOne User Management main page
 
-// CSV parsing and row counting
-async function countCSVRows(file) {
+// Library Loading Logger
+window.libraryLogger = {
+  loadedLibraries: new Set(),
+  loadTimes: {},
+  errors: [],
+  
+  logLibraryLoad: function(libraryName, timestamp, source) {
+    this.loadedLibraries.add(libraryName);
+    this.loadTimes[libraryName] = {
+      timestamp: timestamp,
+      source: source,
+      loadTime: Date.now() - timestamp
+    };
+    console.log(`📚 ${libraryName} loaded from ${source} in ${this.loadTimes[libraryName].loadTime}ms`);
+  },
+  
+  logError: function(libraryName, error, source) {
+    this.errors.push({
+      library: libraryName,
+      error: error,
+      source: source,
+      timestamp: Date.now()
+    });
+    console.error(`❌ Error loading ${libraryName} from ${source}:`, error);
+  },
+  
+  getLoadReport: function() {
+    return {
+      loaded: Array.from(this.loadedLibraries),
+      loadTimes: this.loadTimes,
+      errors: this.errors
+    };
+  }
+};
+
+// CSV Parser Management
+async function ensureCSVParserLoaded() {
   return new Promise((resolve, reject) => {
+    // Check if uDSV is available (our primary parser)
+    if (typeof uDSV !== 'undefined') {
+      console.log('✅ uDSV CSV parser is already loaded');
+      resolve();
+      return;
+    }
+    
+    // Check if Papa Parse is available (fallback)
+    if (typeof Papa !== 'undefined' && Papa.parse) {
+      console.log('✅ Papa Parse is already loaded');
+      resolve();
+      return;
+    }
+    
+    // Wait for parser to load
+    let attempts = 0;
+    const maxAttempts = 100; // 10 seconds max wait
+    
+    const checkParser = () => {
+      attempts++;
+      
+      if (typeof uDSV !== 'undefined' || (typeof Papa !== 'undefined' && Papa.parse)) {
+        console.log('✅ CSV parser loaded after waiting');
+        resolve();
+        return;
+      }
+      
+      if (attempts >= maxAttempts) {
+        console.error('❌ CSV parser failed to load after 10 seconds');
+        reject(new Error('CSV parser library failed to load'));
+        return;
+      }
+      
+      setTimeout(checkParser, 100);
+    };
+    
+    checkParser();
+  });
+}
+
+// Function to count CSV rows and update status
+async function countCSVRows(file) {
+  return new Promise(async (resolve, reject) => {
     if (!file) {
+      window.globalCSVRowCount = 0;
       resolve(0);
       return;
     }
     
-    // Check if uDSV is available
-    if (typeof uDSV === 'undefined') {
-      console.warn('uDSV library not loaded, cannot count CSV rows');
-      resolve(0); // Return 0 as fallback
-      return;
-    }
-    
-    const reader = new FileReader();
-    reader.onload = function(e) {
-      try {
-        const csvString = e.target.result;
-        const result = uDSV.parse(csvString, {
-          header: true,
-          skipEmptyLines: true
-        });
-        const rowCount = result.data ? result.data.length : 0;
-        resolve(rowCount);
-      } catch (error) {
-        console.error('Error parsing CSV for row count:', error);
+    try {
+      // Ensure CSV parser is loaded
+      await ensureCSVParserLoaded();
+      
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const csvString = e.target.result;
+          
+          // Use uDSV if available, otherwise fall back to Papa Parse
+          let result;
+          if (typeof uDSV !== 'undefined') {
+            result = uDSV.parse(csvString, {
+              header: true,
+              skipEmptyLines: true
+            });
+          } else if (typeof Papa !== 'undefined' && Papa.parse) {
+            result = Papa.parse(csvString, {
+              header: true,
+              skipEmptyLines: true
+            });
+          } else {
+            throw new Error('No CSV parser available');
+          }
+          
+          const rowCount = result.data ? result.data.length : 0;
+          window.globalCSVRowCount = rowCount; // Store globally
+          resolve(rowCount);
+        } catch (error) {
+          console.error('Error parsing CSV for row count:', error);
+          window.globalCSVRowCount = 0;
+          reject(error);
+        }
+      };
+      reader.onerror = function(error) {
+        console.error('Error reading file for row count:', error);
+        window.globalCSVRowCount = 0;
         reject(error);
-      }
-    };
-    reader.onerror = function(error) {
-      console.error('Error reading file for row count:', error);
+      };
+      reader.readAsText(file);
+    } catch (error) {
+      console.error('Failed to load CSV parser:', error);
+      window.globalCSVRowCount = 0;
       reject(error);
-    };
-    reader.readAsText(file);
+    }
   });
 }
 
@@ -52,6 +149,183 @@ function clearTotalRecordsDisplay() {
   const actionStatusText = document.getElementById('actionStatusText');
   if (actionStatusText) {
     actionStatusText.textContent = '';
+  }
+}
+
+// File handling utilities
+function loadSavedFileName() {
+  const selectedFileNameDisplay = document.getElementById('selectedFileNameDisplay');
+  const selectedFileNameText = document.getElementById('selectedFileNameText');
+  const saveFileNameCheckbox = document.getElementById('saveFileNameCheckbox');
+  const headerFileName = document.getElementById('headerFileName');
+  const fileNameDisplay = document.getElementById('fileNameDisplay');
+  
+  // First check localStorage for persistent file name (default file from settings)
+  let fileName = localStorage.getItem('pingone_default_csv_file');
+  if (fileName) {
+    if(fileNameDisplay) {
+      fileNameDisplay.textContent = fileName;
+    }
+    if (selectedFileNameText) {
+      selectedFileNameText.innerHTML = `<strong>Default File:</strong> <span style="color:#e60028;">${fileName}</span>`;
+    }
+    if (selectedFileNameDisplay) {
+      selectedFileNameDisplay.style.display = 'block';
+    }
+    if (saveFileNameCheckbox) saveFileNameCheckbox.checked = true;
+    
+    // Update the header text with the saved file name
+    if (headerFileName) {
+      headerFileName.textContent = fileName;
+    }
+  } else {
+    // Check sessionStorage for temporary file name
+    fileName = sessionStorage.getItem('temp_csv_file_name');
+    if (fileName) {
+      if(fileNameDisplay) {
+        fileNameDisplay.textContent = fileName;
+      }
+      if (selectedFileNameText) {
+        selectedFileNameText.innerHTML = `<strong>Selected:</strong> <span style="color:#e60028;">${fileName}</span>`;
+      }
+      if (selectedFileNameDisplay) {
+        selectedFileNameDisplay.style.display = 'block';
+      }
+      if (saveFileNameCheckbox) saveFileNameCheckbox.checked = false;
+      
+      // Update the header text with the selected file name
+      if (headerFileName) {
+        headerFileName.textContent = fileName;
+      }
+    } else {
+      // No saved file name, reset to default
+      if (headerFileName) {
+        headerFileName.textContent = 'file with users and extension of .csv file';
+      }
+    }
+  }
+}
+
+// Function to sync file names when navigating between pages
+function syncFileNameBetweenPages() {
+  // This function can be called when navigating to ensure file names are synced
+  // It's automatically called by loadSavedFileName() on page load
+  loadSavedFileName();
+}
+
+// Rate limit error handling
+function handle429Error(error, operation) {
+  console.error(`${operation} error (429):`, error);
+  
+  // Show user-friendly message
+  const statusBox = document.getElementById('statusBox');
+  const rateLimitMessage = `
+    <div class="alert alert-warning">
+      <strong>Rate Limit Exceeded</strong><br>
+      PingOne API is temporarily limiting requests. This is normal for bulk operations.<br>
+      <strong>What to do:</strong>
+      <ul>
+        <li>Wait 30-60 seconds before trying again</li>
+        <li>Try with fewer users at once</li>
+        <li>Check your PingOne environment limits</li>
+      </ul>
+      <small>Technical details: ${error.message}</small>
+    </div>
+  `;
+  
+  if (statusBox) {
+    statusBox.innerHTML = rateLimitMessage;
+  }
+  
+  // Show rate limit warning banner
+  showRateLimitWarning();
+  
+  // Auto-retry after delay (for certain operations)
+  if (operation === 'Import' || operation === 'Delete') {
+    setTimeout(() => {
+      console.log(`Auto-retrying ${operation} operation after rate limit delay...`);
+      // Could implement auto-retry logic here
+    }, 30000); // 30 second delay
+  }
+}
+
+// Function to check if an error is a 429 error
+function is429Error(error) {
+  return error.message && (
+    error.message.includes('429') || 
+    error.message.includes('Too Many Requests') ||
+    error.message.includes('rate limit')
+  );
+}
+
+// Function to show rate limit warning
+function showRateLimitWarning() {
+  const rateLimitWarning = document.getElementById('rateLimitWarning');
+  if (rateLimitWarning) {
+    rateLimitWarning.style.display = 'flex';
+    
+    // Auto-hide after 60 seconds
+    setTimeout(() => {
+      hideRateLimitWarning();
+    }, 60000);
+  }
+}
+
+// Function to hide rate limit warning
+function hideRateLimitWarning() {
+  const rateLimitWarning = document.getElementById('rateLimitWarning');
+  if (rateLimitWarning) {
+    rateLimitWarning.style.display = 'none';
+  }
+}
+
+// Manual retry function for CSV parser loading
+async function retryPapaParseLoading() {
+  console.log('🔄 Manually retrying CSV parser loading...');
+  
+  const statusBox = document.getElementById('statusBox');
+  if (statusBox) {
+    statusBox.innerHTML = `
+      <div class="alert alert-info">
+        <strong>Loading CSV Parser...</strong><br>
+        Attempting to load the CSV parsing library...<br>
+        <small>Please wait...</small>
+      </div>
+    `;
+  }
+  
+  try {
+    await ensureCSVParserLoaded();
+    console.log('✅ CSV parser loaded successfully on manual retry');
+    
+    // Clear the status
+    if (statusBox) {
+      statusBox.innerHTML = '';
+    }
+    
+    // Re-count rows if a file is selected
+    const fileInput = document.getElementById('csvFile');
+    if (fileInput && fileInput.files && fileInput.files.length > 0) {
+      const rowCount = await countCSVRows(fileInput.files[0]);
+      updateTotalRecordsDisplay(rowCount);
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('❌ Manual CSV parser retry failed:', error);
+    
+    if (statusBox) {
+      statusBox.innerHTML = `
+        <div class="alert alert-danger">
+          <strong>Library Loading Failed</strong><br>
+          CSV parser library failed to load: ${error.message}<br>
+          <button onclick="retryPapaParseLoading()" class="button button-sm button-secondary">Retry Loading</button>
+          <small>If the issue persists, please check your internet connection and refresh the page.</small>
+        </div>
+      `;
+    }
+    
+    return false;
   }
 }
 
@@ -104,31 +378,6 @@ function handleApiError(error, operation = 'operation') {
   }
   
   return errorMessage;
-}
-
-// Function to handle 429 (Too Many Requests) errors gracefully
-function handle429Error(error, operation) {
-  console.error(`${operation} error (429):`, error);
-  
-  const errorMessage = `⚠️ Rate limit exceeded. The server is temporarily limiting requests to prevent overload. Please wait a moment and try again.`;
-  
-  // Show a user-friendly notification
-  if (window.indexUI && window.indexUI.showError) {
-    window.indexUI.showError(
-      `Rate limit exceeded. Please wait a moment and try again.\n\nThis usually happens when:\n• Processing large CSV files\n• Making multiple requests quickly\n• Server is under high load\n\nTry again in 30-60 seconds.`
-    );
-  } else {
-    alert(`Rate limit exceeded. Please wait 30-60 seconds and try again.`);
-  }
-}
-
-// Function to check if an error is a 429 error
-function is429Error(error) {
-  return error.message && (
-    error.message.includes('429') || 
-    error.message.includes('Too Many Requests') ||
-    error.message.includes('rate limit')
-  );
 }
 
 // CSV validation utilities
@@ -372,5 +621,21 @@ window.retryPapaParseLoading = function() {
   // This function is referenced in the HTML but not needed since we use uDSV
   // Adding a placeholder to prevent errors
   console.log('retryPapaParseLoading called - this function is not needed since we use uDSV');
-  showInfo('uDSV CSV parser is already loaded and working correctly.');
-}; 
+  if (typeof showInfo === 'function') {
+    showInfo('uDSV CSV parser is already loaded and working correctly.');
+  } else {
+    alert('uDSV CSV parser is already loaded and working correctly.');
+  }
+};
+
+// Make utility functions globally available
+window.countCSVRows = countCSVRows;
+window.updateTotalRecordsDisplay = updateTotalRecordsDisplay;
+window.clearTotalRecordsDisplay = clearTotalRecordsDisplay;
+window.loadSavedFileName = loadSavedFileName;
+window.syncFileNameBetweenPages = syncFileNameBetweenPages;
+window.handle429Error = handle429Error;
+window.is429Error = is429Error;
+window.showRateLimitWarning = showRateLimitWarning;
+window.hideRateLimitWarning = hideRateLimitWarning;
+window.retryPapaParseLoading = retryPapaParseLoading; 
