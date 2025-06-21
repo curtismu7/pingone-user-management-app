@@ -1178,7 +1178,7 @@
   <div style="flex:1;display:flex;flex-direction:column;align-items:center;min-height:100vh;margin-left:clamp(200px, 20vw, 240px);padding-top:clamp(3.5rem, 8vw, 4.2rem);padding-bottom:80px;overflow-y:auto;width:calc(100vw - clamp(200px, 20vw, 240px));">
     <div class="settings-card">
       <button onclick="window.close()" title="Close" style="position:absolute;top:0.7rem;right:0.7rem;background:none;border:none;font-size:2.2rem;color:#e60028;cursor:pointer;z-index:2001;line-height:1;">&times;</button>
-      <form id="settingsForm" autocomplete="off" onsubmit="event.preventDefault(); saveSettings();">
+      <form id="settingsForm" autocomplete="off">
         <div class="settings-section">
           <div style="font-size:1.45rem;font-weight:700;color:#0033a0;margin-bottom:1.1rem;">Credentials</div>
           <div style="background:#f8fafc;border:1.5px solid #cbd5e1;border-radius:12px;padding:1.5rem 1.5rem 1rem 1.5rem;margin-bottom:1.2rem;width:100%;max-width:900px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;margin-left:auto;margin-right:auto;">
@@ -2292,11 +2292,11 @@
       settingsTokenManager = new SettingsTokenManager();
       
       // Define credential input elements and checkboxes
-      const envIdInput = document.getElementById('settingsEnvId');
-      const clientIdInput = document.getElementById('settingsClientId');
-      const clientSecretInput = document.getElementById('settingsClientSecret');
-      const rememberSecretCheckbox = document.getElementById('settingsRememberClientSecret');
-      const saveAllCredentialsCheckbox = document.getElementById('settingsSaveAllCredentials');
+      let envIdInput = document.getElementById('settingsEnvId');
+      let clientIdInput = document.getElementById('settingsClientId');
+      let clientSecretInput = document.getElementById('settingsClientSecret');
+      let rememberSecretCheckbox = document.getElementById('settingsRememberClientSecret');
+      let saveAllCredentialsCheckbox = document.getElementById('settingsSaveAllCredentials');
       
       console.log('Settings page loaded. Checking for default file in localStorage...');
       const savedDefaultFileForDebugging = localStorage.getItem('default_csv_file');
