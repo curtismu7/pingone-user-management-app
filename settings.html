@@ -2306,6 +2306,9 @@
       // Initialize the token management system
       settingsTokenManager = new SettingsTokenManager();
       
+      // Initialize custom file input for settings persistence
+      createSettingsCustomFileInput();
+      
       // Define credential input elements and checkboxes
       let envIdInput = document.getElementById('settingsEnvId');
       let clientIdInput = document.getElementById('settingsClientId');
@@ -3579,6 +3582,164 @@
       if (rateLimitWarning) {
         rateLimitWarning.style.display = 'none';
       }
+    }
+
+    // Function to create a custom file input that persists selection for settings
+    function createSettingsCustomFileInput() {
+      const settingsDefaultFile = document.getElementById('settingsDefaultFile');
+      if (!settingsDefaultFile) return;
+      
+      const fileInputContainer = settingsDefaultFile.parentElement;
+      
+      // Create custom file input wrapper
+      const customFileInput = document.createElement('div');
+      customFileInput.className = 'custom-file-input-settings';
+      customFileInput.style.cssText = `
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
+      `;
+      
+      // Create the actual file input (hidden)
+      const hiddenFileInput = document.createElement('input');
+      hiddenFileInput.type = 'file';
+      hiddenFileInput.accept = '.csv';
+      hiddenFileInput.id = 'settingsDefaultFile';
+      hiddenFileInput.name = 'defaultFile';
+      hiddenFileInput.style.display = 'none';
+      
+      // Create custom button
+      const customButton = document.createElement('button');
+      customButton.type = 'button';
+      customButton.className = 'button button-secondary';
+      customButton.textContent = 'Choose Default File';
+      customButton.style.cssText = `
+        white-space: nowrap;
+        min-width: 140px;
+      `;
+      
+      // Create file name display
+      const fileNameDisplay = document.createElement('span');
+      fileNameDisplay.id = 'settingsCustomFileNameDisplay';
+      fileNameDisplay.style.cssText = `
+        color: #6b7280;
+        font-style: italic;
+        flex: 1;
+      `;
+      fileNameDisplay.textContent = 'No default file set';
+      
+      // Create clear button
+      const clearButton = document.createElement('button');
+      clearButton.type = 'button';
+      clearButton.className = 'button button-light button-sm';
+      clearButton.textContent = 'Clear';
+      clearButton.style.display = 'none';
+      
+      // Add event listeners
+      customButton.addEventListener('click', () => {
+        hiddenFileInput.click();
+      });
+      
+      hiddenFileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          fileNameDisplay.textContent = file.name;
+          fileNameDisplay.style.color = '#e60028';
+          fileNameDisplay.style.fontStyle = 'normal';
+          clearButton.style.display = 'inline-block';
+          
+          // Save to localStorage
+          localStorage.setItem('pingone_default_csv_file', file.name);
+          
+          // Update other displays
+          updateSettingsFileDisplays(file.name);
+          
+          // Count CSV rows
+          countCSVRows(file);
+        }
+      });
+      
+      clearButton.addEventListener('click', () => {
+        hiddenFileInput.value = '';
+        fileNameDisplay.textContent = 'No default file set';
+        fileNameDisplay.style.color = '#6b7280';
+        fileNameDisplay.style.fontStyle = 'italic';
+        clearButton.style.display = 'none';
+        
+        // Clear localStorage
+        localStorage.removeItem('pingone_default_csv_file');
+        
+        // Clear other displays
+        clearSettingsFileDisplays();
+      });
+      
+      // Assemble the custom input
+      customFileInput.appendChild(customButton);
+      customFileInput.appendChild(fileNameDisplay);
+      customFileInput.appendChild(clearButton);
+      
+      // Replace the original input
+      fileInputContainer.replaceChild(customFileInput, settingsDefaultFile);
+      fileInputContainer.appendChild(hiddenFileInput);
+      
+      // Restore saved file name
+      restoreSettingsSavedFileName();
+      
+      return hiddenFileInput;
+    }
+    
+    // Function to restore saved file name for settings
+    function restoreSettingsSavedFileName() {
+      const fileNameDisplay = document.getElementById('settingsCustomFileNameDisplay');
+      const clearButton = document.querySelector('.custom-file-input-settings .button-light');
+      
+      // Check for saved default file name
+      const savedFileName = localStorage.getItem('pingone_default_csv_file');
+      if (savedFileName && fileNameDisplay) {
+        fileNameDisplay.textContent = savedFileName;
+        fileNameDisplay.style.color = '#e60028';
+        fileNameDisplay.style.fontStyle = 'normal';
+        if (clearButton) {
+          clearButton.style.display = 'inline-block';
+        }
+        
+        // Update other displays
+        updateSettingsFileDisplays(savedFileName);
+      }
+    }
+    
+    // Function to update all file displays in settings
+    function updateSettingsFileDisplays(fileName) {
+      // Update settings page displays
+      const settingsSelectedFileNameDisplay = document.getElementById('settingsSelectedFileNameDisplay');
+      const settingsSelectedFileNameText = document.getElementById('settingsSelectedFileNameText');
+      const defaultFileName = document.getElementById('defaultFileName');
+      
+      if (settingsSelectedFileNameDisplay && settingsSelectedFileNameText) {
+        settingsSelectedFileNameText.innerHTML = `<strong>Default file:</strong> <span style="color:#e60028;">${fileName}</span>`;
+        settingsSelectedFileNameDisplay.style.display = 'block';
+      }
+      
+      if (defaultFileName) {
+        defaultFileName.textContent = fileName;
+      }
+    }
+    
+    // Function to clear all file displays in settings
+    function clearSettingsFileDisplays() {
+      const settingsSelectedFileNameDisplay = document.getElementById('settingsSelectedFileNameDisplay');
+      const defaultFileName = document.getElementById('defaultFileName');
+      
+      if (settingsSelectedFileNameDisplay) {
+        settingsSelectedFileNameDisplay.style.display = 'none';
+      }
+      
+      if (defaultFileName) {
+        defaultFileName.textContent = '';
+      }
+      
+      clearTotalRecordsDisplay();
     }
   </script>
   
