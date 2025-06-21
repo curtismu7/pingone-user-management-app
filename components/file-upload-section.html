@@ -2,7 +2,11 @@
 <div class="file-section">
   <div class="section-title">Actions</div>
   <div class="file-input-container">
-    <input type="file" id="csvFile" accept=".csv" class="enhanced-input" data-tippy-content="Select CSV file with user data" />
+    <div class="file-input-wrapper">
+      <input type="file" id="csvFile" accept=".csv" class="enhanced-input" data-tippy-content="Select CSV file with user data" />
+      <label for="csvFile" class="file-input-label">Choose File</label>
+      <span id="fileNameDisplay" class="file-name-display">No file selected</span>
+    </div>
     <div class="file-checkbox-row">
       <input type="checkbox" id="saveFileNameCheckbox" class="unified-checkbox enhanced-input" data-tippy-content="Save file name to browser storage" />
       <label for="saveFileNameCheckbox" class="file-checkbox-label">

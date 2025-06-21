@@ -2118,7 +2118,7 @@
           const defaultFileName = document.getElementById('defaultFileName');
           
           if (settingsSelectedFileNameDisplay && settingsSelectedFileNameText) {
-            settingsSelectedFileNameText.innerHTML = `<strong>Selected:</strong> <span style="color:#e60028;">${fileName}</span>`;
+            settingsSelectedFileNameText.innerHTML = `<strong>Selected:</strong> <span style="color:#e60028;">${fileName}</span> <span style="color:#16a34a;font-size:0.8em;">(Will be used on main page)</span>`;
             settingsSelectedFileNameDisplay.style.display = 'block';
           }
           
@@ -2134,14 +2134,27 @@
             updateTotalRecordsDisplay(0);
           });
           
-          // Save based on checkbox state - use shared storage key for cross-page persistence
-          if (saveFileNameCheckbox && saveFileNameCheckbox.checked) {
-            localStorage.setItem('pingone_default_csv_file', fileName);
-            sessionStorage.removeItem('temp_csv_file_name');
-          } else {
-            sessionStorage.setItem('temp_csv_file_name', fileName);
-            localStorage.removeItem('pingone_default_csv_file');
-          }
+          // Save file content as base64 for transfer to main page
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            const base64Content = e.target.result;
+            
+            // Save based on checkbox state - use shared storage key for cross-page persistence
+            if (saveFileNameCheckbox && saveFileNameCheckbox.checked) {
+              localStorage.setItem('pingone_default_csv_file', fileName);
+              localStorage.setItem('pingone_default_csv_content', base64Content);
+              sessionStorage.removeItem('temp_csv_file_name');
+            } else {
+              sessionStorage.setItem('temp_csv_file_name', fileName);
+              sessionStorage.setItem('temp_csv_content', base64Content);
+              localStorage.removeItem('pingone_default_csv_file');
+              localStorage.removeItem('pingone_default_csv_content');
+            }
+          };
+          reader.readAsDataURL(file);
+
+          // Save the last selected file name globally
+          localStorage.setItem('lastSelectedFileName', fileName);
         } else {
           // Clear display and storage
           const settingsSelectedFileNameDisplay = document.getElementById('settingsSelectedFileNameDisplay');
@@ -2158,7 +2171,9 @@
           clearTotalRecordsDisplay();
           
           localStorage.removeItem('pingone_default_csv_file');
+          localStorage.removeItem('pingone_default_csv_content');
           sessionStorage.removeItem('temp_csv_file_name');
+          sessionStorage.removeItem('temp_csv_content');
         }
       }
       
@@ -2199,69 +2214,19 @@
           }
         });
         
-        // Special handling for file name restoration
-        this.restoreFileName();
-      }
-      
-      restoreFileName() {
-        const settingsSelectedFileNameDisplay = document.getElementById('settingsSelectedFileNameDisplay');
-        const settingsSelectedFileNameText = document.getElementById('settingsSelectedFileNameText');
-        const saveFileNameCheckbox = document.getElementById('saveFileNameCheckbox');
-        const defaultFileName = document.getElementById('defaultFileName');
-        
-        // First check localStorage for persistent file name (shared with main page)
-        let fileName = localStorage.getItem('pingone_default_csv_file');
-        if (fileName) {
-          if (settingsSelectedFileNameText) {
-            settingsSelectedFileNameText.innerHTML = `<strong>Selected:</strong> <span style="color:#e60028;">${fileName}</span>`;
-          }
-          if (settingsSelectedFileNameDisplay) {
+        // Restore last selected file name display
+        const lastSelectedFile = localStorage.getItem('lastSelectedFileName');
+        if (lastSelectedFile) {
+          const settingsSelectedFileNameDisplay = document.getElementById('settingsSelectedFileNameDisplay');
+          const settingsSelectedFileNameText = document.getElementById('settingsSelectedFileNameText');
+          if (settingsSelectedFileNameDisplay && settingsSelectedFileNameText) {
+            settingsSelectedFileNameText.innerHTML = `<strong>Last selected file:</strong> <span style="color:#e60028;">${lastSelectedFile}</span> <span style="color:#6b7280;font-size:0.8em;">(from previous session)</span>`;
             settingsSelectedFileNameDisplay.style.display = 'block';
           }
-          if (defaultFileName) {
-            defaultFileName.textContent = fileName;
-          }
-          if (saveFileNameCheckbox) {
-            saveFileNameCheckbox.checked = true;
-          }
-          
-          // Note: We can't count rows here since we don't have the actual file object
-          // The row count will be updated when the user selects the file again
-          clearTotalRecordsDisplay();
-          return;
         }
-        
-        // Then check sessionStorage for temporary file name
-        fileName = sessionStorage.getItem('temp_csv_file_name');
-        if (fileName) {
-          if (settingsSelectedFileNameText) {
-            settingsSelectedFileNameText.innerHTML = `<strong>Selected:</strong> <span style="color:#e60028;">${fileName}</span>`;
-          }
-          if (settingsSelectedFileNameDisplay) {
-            settingsSelectedFileNameDisplay.style.display = 'block';
-          }
-          if (defaultFileName) {
-            defaultFileName.textContent = fileName;
-          }
-          if (saveFileNameCheckbox) {
-            saveFileNameCheckbox.checked = false;
-          }
-          return;
-        }
-        
-        // No saved file name
-        if (settingsSelectedFileNameDisplay) {
-          settingsSelectedFileNameDisplay.style.display = 'none';
-        }
-        if (defaultFileName) {
-          defaultFileName.textContent = '';
-        }
-        
-        // Clear total records display
-        clearTotalRecordsDisplay();
       }
       
-      clearAllSettings() {
+      clearStorage() {
         // Clear all localStorage items with our prefix
         Object.keys(localStorage).forEach(key => {
           if (key.startsWith(this.storagePrefix)) {
@@ -2271,6 +2236,7 @@
         
         // Clear shared file storage
         localStorage.removeItem('pingone_default_csv_file');
+        localStorage.removeItem('pingone_default_csv_content');
         sessionStorage.removeItem('temp_csv_file_name');
         
         // Reset form elements
@@ -2336,6 +2302,7 @@
           const fileInput = document.getElementById('settingsDefaultFile');
           const selectedFileNameDisplay = document.getElementById('settingsSelectedFileNameDisplay');
           const saveFileNameCheckbox = document.getElementById('saveFileNameCheckbox');
+          const defaultFileName = document.getElementById('defaultFileName');
 
           if (fileInput) {
             fileInput.value = '';
@@ -2343,15 +2310,29 @@
           if (selectedFileNameDisplay) {
             selectedFileNameDisplay.style.display = 'none';
           }
+          if (defaultFileName) {
+            defaultFileName.textContent = '';
+          }
           
           // Clear storage using the new keys
           localStorage.removeItem('pingone_default_csv_file');
+          localStorage.removeItem('pingone_default_csv_content');
           sessionStorage.removeItem('temp_csv_file_name');
           
           if (saveFileNameCheckbox) {
             saveFileNameCheckbox.checked = false;
             localStorage.removeItem('pingone_save_file_name');
           }
+          
+          // Clear total records display
+          clearTotalRecordsDisplay();
+          
+          // Trigger storage event to notify main page
+          window.dispatchEvent(new StorageEvent('storage', {
+            key: 'pingone_default_csv_file',
+            newValue: null,
+            oldValue: localStorage.getItem('pingone_default_csv_file')
+          }));
         });
       }
       
@@ -2919,7 +2900,7 @@
     function actuallyClearAllSettings() {
       // Clear comprehensive form persistence state
       if (settingsFormPersistence) {
-        settingsFormPersistence.clearAllSettings();
+        settingsFormPersistence.clearStorage();
       }
       
       // Clear token management system

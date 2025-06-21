@@ -2422,10 +2422,15 @@
       const selectedFileNameDisplay = document.getElementById('selectedFileNameDisplay');
       const selectedFileNameText = document.getElementById('selectedFileNameText');
       const headerFileName = document.getElementById('headerFileName');
+      const fileNameDisplay = document.getElementById('fileNameDisplay');
       
       if (csvFileInput.files && csvFileInput.files.length > 0) {
         const fileName = csvFileInput.files[0].name;
         const file = csvFileInput.files[0];
+
+        if(fileNameDisplay) {
+          fileNameDisplay.textContent = fileName;
+        }
         
         // Display the file name
         selectedFileNameText.innerHTML = `<strong>Selected:</strong> <span style="color:#e60028;">${fileName}</span>`;
@@ -2454,9 +2459,15 @@
           sessionStorage.setItem('temp_csv_file_name', fileName);
           localStorage.removeItem('pingone_default_csv_file');
         }
+
+        // Save the last selected file name globally
+        localStorage.setItem('lastSelectedFileName', fileName);
       } else {
         // No file selected
         selectedFileNameDisplay.style.display = 'none';
+        if(fileNameDisplay) {
+          fileNameDisplay.textContent = 'No file selected';
+        }
         localStorage.removeItem('pingone_default_csv_file');
         sessionStorage.removeItem('temp_csv_file_name');
         
@@ -2495,10 +2506,14 @@
       const selectedFileNameText = document.getElementById('selectedFileNameText');
       const saveFileNameCheckbox = document.getElementById('saveFileNameCheckbox');
       const headerFileName = document.getElementById('headerFileName');
+      const fileNameDisplay = document.getElementById('fileNameDisplay');
       
       // First check localStorage for persistent file name (default file from settings)
       let fileName = localStorage.getItem('pingone_default_csv_file');
       if (fileName) {
+        if(fileNameDisplay) {
+          fileNameDisplay.textContent = fileName;
+        }
         selectedFileNameText.innerHTML = `<strong>Default File:</strong> <span style="color:#e60028;">${fileName}</span>`;
         selectedFileNameDisplay.style.display = 'block';
         if (saveFileNameCheckbox) saveFileNameCheckbox.checked = true;
@@ -2517,6 +2532,9 @@
       // Then check sessionStorage for temporary file name
       fileName = sessionStorage.getItem('temp_csv_file_name');
       if (fileName) {
+        if(fileNameDisplay) {
+          fileNameDisplay.textContent = fileName;
+        }
         selectedFileNameText.innerHTML = `<strong>Selected:</strong> <span style="color:#e60028;">${fileName}</span>`;
         selectedFileNameDisplay.style.display = 'block';
         if (saveFileNameCheckbox) saveFileNameCheckbox.checked = false;
