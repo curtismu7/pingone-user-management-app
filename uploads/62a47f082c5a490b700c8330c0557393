@@ -1,0 +1,2 @@
+username,email,firstName,lastName,populationId
+testuser,test@example.com,Test,User,test-pop

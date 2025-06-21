@@ -1,8 +1,11 @@
+import Papa from 'papaparse';
+import axios from 'axios';
+
 const authClient = new PingOneAuthClient({
   AUTH_URI: 'https://auth.pingone.com', // 'https://auth.pingone.eu', 'https://auth.pingone.ca' or 'https://auth.pingone.asia'
   API_URI: 'https://api.pingone.com', // 'https://api.pingone.eu', 'https://api.pingone.ca' or 'https://api.pingone.asia'
-  environmentId: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
-  clientId: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
+  environmentId: '7853c888-ad7d-470c-add6-597397698767',
+  clientId: '6558a0a2-9f23-4bb9-90f1-2ee5d65d4f44',
   redirectUri: 'http://localhost:8080',
   scopes: ['openid','profile', 'email', 'address'],
   responseType: ['token', 'id_token'],
@@ -139,3 +142,50 @@ function addTableBody(jsonObject) {
 function isObject(value) {
   return value && typeof value === 'object' && value.constructor === Object;
 }
+
+// Replace with your PingOne environment and access token
+const PINGONE_ENV_ID = 'YOUR_ENV_ID';
+const ACCESS_TOKEN = 'YOUR_ADMIN_ACCESS_TOKEN'; // Must have user:create scope
+
+async function createUser(user) {
+  const url = `https://api.pingone.com/v1/environments/${PINGONE_ENV_ID}/users`;
+  const data = {
+    username: user.username,
+    email: user.email,
+    name: {
+      given: user.firstName,
+      family: user.lastName
+    }
+    // Add other fields as needed
+  };
+  return axios.post(url, data, {
+    headers: {
+      'Authorization': `Bearer ${ACCESS_TOKEN}`,
+      'Content-Type': 'application/json'
+    }
+  });
+}
+
+window.importUsers = function() {
+  const fileInput = document.getElementById('csvFileInput');
+  const file = fileInput.files[0];
+  if (!file) {
+    alert('Please select a CSV file.');
+    return;
+  }
+
+  Papa.parse(file, {
+    header: true,
+    complete: async function(results) {
+      for (const user of results.data) {
+        try {
+          await createUser(user);
+          console.log(`User ${user.username} created.`);
+        } catch (err) {
+          console.error(`Failed to create user ${user.username}:`, err.response?.data || err.message);
+        }
+      }
+      alert('Import complete!');
+    }
+  });
+};
