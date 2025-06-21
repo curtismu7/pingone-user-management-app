@@ -960,7 +960,6 @@
         this.addElement('settingsSaveAllCredentials', 'save_all_credentials', 'checkbox');
         this.addElement('settingsRememberClientSecret', 'remember_client_secret', 'checkbox');
         this.addElement('saveFileNameCheckbox', 'save_file_name', 'checkbox');
-        this.addElement('settingsModifyAttributes', 'modify_attributes', 'checkbox');
         
         // Modify attribute checkboxes
         this.addElement('modAttrSelectAll', 'mod_attr_select_all', 'checkbox');
@@ -1736,7 +1735,19 @@
         const language = document.getElementById('settingsLanguage').value;
         const pageSize = document.getElementById('settingsResultsPageSize').value;
         const apiBaseUrl = document.getElementById('settingsApiBaseUrl').value;
-        const modifyAttributes = document.getElementById('settingsModifyAttributes').checked;
+        
+        // Collect checked modify attributes from individual checkboxes
+        const modifyAttributeCheckboxes = [
+          'modAttrFirstName', 'modAttrLastName', 'modAttrEmail', 'modAttrUsername',
+          'modAttrPassword', 'modAttrPopulation', 'modAttrActive', 'modAttrTitle',
+          'modAttrPhone', 'modAttrAddress', 'modAttrLocale', 'modAttrTimezone',
+          'modAttrExternalId', 'modAttrType', 'modAttrNickname'
+        ];
+        const checkedModifyAttributes = modifyAttributeCheckboxes
+          .map(id => document.getElementById(id))
+          .filter(checkbox => checkbox && checkbox.checked)
+          .map(checkbox => checkbox.id);
+        
         const saveAllCredentialsCheckbox = document.getElementById('settingsSaveAllCredentials');
         const rememberSecretCheckbox = document.getElementById('settingsRememberClientSecret');
         
@@ -1771,7 +1782,7 @@
         localStorage.setItem('settings_language', language);
         localStorage.setItem('settings_results_page_size', pageSize);
         localStorage.setItem('settings_api_base_url', apiBaseUrl);
-        localStorage.setItem('settings_modify_attributes', modifyAttributes);
+        localStorage.setItem('settings_modify_attributes', checkedModifyAttributes.join(','));
         
         // Mark credentials as validated
         window.credentialsValidated = true;
