@@ -429,16 +429,28 @@ function saveModifyAttributes() {
   localStorage.setItem('modify_attributes', JSON.stringify(attributes));
 }
 
-// Export functions for use in other modules
+// Make UI functions globally available
+window.showError = showError;
+window.showSuccess = showSuccess;
+window.showInfo = showInfo;
+window.showNotification = showNotification;
+window.showModal = showModal;
+window.hideModal = hideModal;
+window.showActionStatus = showActionStatus;
+window.hideActionStatus = hideActionStatus;
+window.updateActionProgress = updateActionProgress;
+window.showActionComplete = showActionComplete;
+
+// Initialize global UI object
 window.indexUI = {
-  showActionStatus,
-  hideActionStatus,
-  updateActionProgress,
-  showActionComplete,
-  showModal,
-  hideModal,
-  showSuccess,
-  showError,
-  showInfo,
-  handleProgressUpdate
+  showError: showError,
+  showSuccess: showSuccess,
+  showInfo: showInfo,
+  showNotification: showNotification,
+  showModal: showModal,
+  hideModal: hideModal,
+  showActionStatus: showActionStatus,
+  hideActionStatus: hideActionStatus,
+  updateActionProgress: updateActionProgress,
+  showActionComplete: showActionComplete
 }; 

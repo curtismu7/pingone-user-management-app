@@ -47,12 +47,6 @@ function setupEventListeners() {
   // Action buttons
   setupActionButtons();
   
-  // Clear buttons
-  setupClearButtons();
-  
-  // Credential checkboxes
-  setupCredentialCheckboxes();
-  
   // Storage event listeners for cross-page sync
   window.addEventListener('storage', handleStorageEvents);
 }
@@ -80,37 +74,6 @@ function setupActionButtons() {
   const cancelBtn = document.getElementById('cancelBtn');
   if (cancelBtn) {
     cancelBtn.addEventListener('click', cancelOperation);
-  }
-}
-
-function setupClearButtons() {
-  // Clear credential buttons
-  const clearEnvBtn = document.getElementById('clearEnvIdBtn');
-  if (clearEnvBtn) {
-    clearEnvBtn.addEventListener('click', () => clearField('envId'));
-  }
-  
-  const clearClientIdBtn = document.getElementById('clearClientIdBtn');
-  if (clearClientIdBtn) {
-    clearClientIdBtn.addEventListener('click', () => clearField('clientId'));
-  }
-  
-  const clearClientSecretBtn = document.getElementById('clearClientSecretBtn');
-  if (clearClientSecretBtn) {
-    clearClientSecretBtn.addEventListener('click', () => clearField('clientSecret'));
-  }
-}
-
-function setupCredentialCheckboxes() {
-  const rememberSecretCheckbox = document.getElementById('rememberClientSecret');
-  const saveAllCredentialsCheckbox = document.getElementById('saveAllCredentials');
-  
-  if (rememberSecretCheckbox) {
-    rememberSecretCheckbox.addEventListener('change', handleCredentialCheckboxChange);
-  }
-  
-  if (saveAllCredentialsCheckbox) {
-    saveAllCredentialsCheckbox.addEventListener('change', handleCredentialCheckboxChange);
   }
 }
 
@@ -243,9 +206,10 @@ function cancelOperation() {
 
 // Credential management
 function getCredentials() {
-  const environmentId = document.getElementById('envId')?.value?.trim();
-  const clientId = document.getElementById('clientId')?.value?.trim();
-  const clientSecret = document.getElementById('clientSecret')?.value?.trim();
+  // Get credentials from localStorage (saved from settings page)
+  const environmentId = localStorage.getItem('pingone_env_id')?.trim();
+  const clientId = localStorage.getItem('pingone_client_id')?.trim();
+  const clientSecret = localStorage.getItem('pingone_client_secret')?.trim();
   
   return {
     environmentId,
@@ -255,57 +219,9 @@ function getCredentials() {
   };
 }
 
-function handleCredentialCheckboxChange() {
-  const rememberSecretCheckbox = document.getElementById('rememberClientSecret');
-  const saveAllCredentialsCheckbox = document.getElementById('saveAllCredentials');
-  
-  if (rememberSecretCheckbox) {
-    localStorage.setItem('remember_client_secret', rememberSecretCheckbox.checked.toString());
-  }
-  
-  if (saveAllCredentialsCheckbox) {
-    localStorage.setItem('save_all_credentials', saveAllCredentialsCheckbox.checked.toString());
-  }
-  
-  // Save current credential values if checkboxes are checked
-  const credentials = getCredentials();
-  if (saveAllCredentialsCheckbox && saveAllCredentialsCheckbox.checked) {
-    if (credentials.environmentId) localStorage.setItem('env_id', credentials.environmentId);
-    if (credentials.clientId) localStorage.setItem('client_id', credentials.clientId);
-    if (credentials.clientSecret) localStorage.setItem('client_secret', credentials.clientSecret);
-  }
-}
-
-function clearField(fieldName) {
-  const field = document.getElementById(fieldName);
-  if (field) {
-    field.value = '';
-    localStorage.removeItem(fieldName === 'envId' ? 'env_id' : 
-                          fieldName === 'clientId' ? 'client_id' : 'client_secret');
-  }
-}
-
 // State management
 function restoreSavedState() {
-  // Restore credentials
-  const envId = localStorage.getItem('env_id');
-  const clientId = localStorage.getItem('client_id');
-  const clientSecret = localStorage.getItem('client_secret');
-  
-  if (envId) document.getElementById('envId').value = envId;
-  if (clientId) document.getElementById('clientId').value = clientId;
-  if (clientSecret) document.getElementById('clientSecret').value = clientSecret;
-  
-  // Restore checkboxes
-  const rememberSecret = localStorage.getItem('remember_client_secret');
-  const saveAllCredentials = localStorage.getItem('save_all_credentials');
-  
-  if (rememberSecret) {
-    document.getElementById('rememberClientSecret').checked = rememberSecret === 'true';
-  }
-  if (saveAllCredentials) {
-    document.getElementById('saveAllCredentials').checked = saveAllCredentials === 'true';
-  }
+  // Credentials are now managed in settings page, so we don't restore them here
   
   // Restore file name
   const savedFileName = localStorage.getItem('saved_csv_file_name') || 
@@ -377,4 +293,48 @@ window.indexCore = {
   handleFileSelection,
   updateFileDisplay,
   clearFileDisplay
+};
+
+// Global functions for HTML onclick handlers
+window.uploadCSV = function() {
+  performAction('import');
+};
+
+window.deleteCSVUsers = function() {
+  performAction('delete');
+};
+
+window.modifyCSVUsers = function() {
+  performAction('modify');
+};
+
+// Make other essential functions globally available
+window.showError = function(message) {
+  if (window.indexUI && window.indexUI.showError) {
+    window.indexUI.showError(message);
+  } else {
+    alert(message);
+  }
+};
+
+window.showSuccess = function(message) {
+  if (window.indexUI && window.indexUI.showSuccess) {
+    window.indexUI.showSuccess(message);
+  } else {
+    alert(message);
+  }
+};
+
+// Initialize UI functions globally
+window.indexUI = {
+  showError: showError,
+  showSuccess: showSuccess,
+  showInfo: showInfo,
+  showNotification: showNotification,
+  showModal: showModal,
+  hideModal: hideModal,
+  showActionStatus: showActionStatus,
+  hideActionStatus: hideActionStatus,
+  updateActionProgress: updateActionProgress,
+  showActionComplete: showActionComplete
 }; 
