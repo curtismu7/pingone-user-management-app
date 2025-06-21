@@ -202,14 +202,26 @@ app.post('/get-worker-token', authRateLimiter, validateInput, async (req, res) =
     
     logStatus(`/get-worker-token | start`);
     
+    // Log the request data for debugging (without sensitive info)
+    console.log(`get-worker-token request:`, {
+      environmentId: environmentId ? `${environmentId.substring(0, 8)}...` : 'undefined',
+      clientId: clientId ? `${clientId.substring(0, 8)}...` : 'undefined',
+      clientSecret: clientSecret ? `${clientSecret.substring(0, 8)}...` : 'undefined',
+      hasEnvironmentId: !!environmentId,
+      hasClientId: !!clientId,
+      hasClientSecret: !!clientSecret
+    });
+    
     // Validate input
     const validation = authService.validateAllCredentials(environmentId, clientId, clientSecret);
     if (!validation.isValid) {
       logStatus(`/get-worker-token | validation_error`);
+      console.log(`Validation errors:`, validation.errors);
       writeRunFooter(startTime);
       return res.status(400).json({ 
         error: 'Invalid credentials format.',
-        details: validation.errors
+        details: validation.errors,
+        help: 'Please check that your Environment ID, Client ID, and Client Secret are correctly formatted.'
       });
     }
     
@@ -225,7 +237,36 @@ app.post('/get-worker-token', authRateLimiter, validateInput, async (req, res) =
     safeAppendLog(logEntry + '\n');
     writeRunFooter(startTime);
     
-    res.status(500).json({ error: err.message });
+    // Provide more helpful error messages
+    let statusCode = 500;
+    let errorResponse = { error: 'Internal server error' };
+    
+    if (err.message && err.message.includes('Invalid credentials')) {
+      statusCode = 401;
+      errorResponse = { 
+        error: 'Invalid credentials. Please check your Environment ID, Client ID, and Client Secret.',
+        help: 'Make sure all three fields are filled in correctly and try again.'
+      };
+    } else if (err.message && err.message.includes('Rate limit')) {
+      statusCode = 429;
+      errorResponse = { 
+        error: 'Rate limit exceeded. Please wait a moment and try again.',
+        help: 'Too many authentication attempts. Please wait 15 minutes before trying again.'
+      };
+    } else if (err.message && err.message.includes('Network error')) {
+      statusCode = 503;
+      errorResponse = { 
+        error: 'Network error. Please check your internet connection.',
+        help: 'Unable to connect to PingOne services. Please check your network connection.'
+      };
+    } else {
+      errorResponse = { 
+        error: err.message || 'Authentication failed',
+        help: 'Please check your credentials and try again. If the problem persists, contact your administrator.'
+      };
+    }
+    
+    res.status(statusCode).json(errorResponse);
   }
 });
 
