@@ -73,1123 +73,15 @@
           }
         }
       };
-      window.libraryLogger.logLibraryLoad('uDSV', Date.now(), 'head_script');
     } else {
-      console.warn('uDSV not available, falling back to Papa Parse CDN');
-      // Fallback to Papa Parse CDN
-      const script = document.createElement('script');
-      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.5.3/papaparse.min.js';
-      script.onload = function() {
-        console.log('Papa Parse loaded from CDN fallback');
-        window.libraryLogger.logLibraryLoad('PapaParse', Date.now(), 'fallback_script');
-      };
-      script.onerror = function() {
-        console.error('Failed to load both uDSV and Papa Parse');
-      };
-      document.head.appendChild(script);
+      console.error('uDSV CSV parser not available - this is required for CSV parsing functionality');
     }
   </script>
   
-  <!-- Library Loading Logger -->
-  <script>
-    // Library Loading Logger
-    window.libraryLogger = {
-      loadedLibraries: new Set(),
-      loadTimes: {},
-      errors: [],
-      
-      logLibraryLoad: function(libraryName, loadTime = Date.now(), source = 'unknown') {
-        const timestamp = new Date(loadTime).toISOString();
-        const loadDuration = this.loadTimes[libraryName] ? loadTime - this.loadTimes[libraryName] : 0;
-        
-        this.loadedLibraries.add(libraryName);
-        this.loadTimes[libraryName] = loadTime;
-        
-        const logMessage = `📚 Library Loaded: ${libraryName} | Time: ${timestamp} | Source: ${source} | Duration: ${loadDuration}ms`;
-        console.log(logMessage);
-        
-        // Also log to server if available
-        this.logToServer('library_loaded', {
-          library: libraryName,
-          timestamp: timestamp,
-          source: source,
-          duration: loadDuration,
-          page: window.location.pathname
-        });
-        
-        return logMessage;
-      },
-      
-      logLibraryError: function(libraryName, error, source = 'unknown') {
-        const timestamp = new Date().toISOString();
-        const errorInfo = {
-          library: libraryName,
-          error: error.message || error,
-          timestamp: timestamp,
-          source: source,
-          page: window.location.pathname
-        };
-        
-        this.errors.push(errorInfo);
-        
-        const logMessage = `❌ Library Error: ${libraryName} | Error: ${error.message || error} | Time: ${timestamp} | Source: ${source}`;
-        console.error(logMessage);
-        
-        // Log to server if available
-        this.logToServer('library_error', errorInfo);
-        
-        return logMessage;
-      },
-      
-      logToServer: function(eventType, data) {
-        // Try to send to server if available
-        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-          fetch('/log-library-event', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              event: eventType,
-              data: data,
-              userAgent: navigator.userAgent,
-              url: window.location.href
-            })
-          }).catch(err => {
-            // Silently fail if server is not available
-          });
-        }
-      },
-      
-      getLoadReport: function() {
-        return {
-          loadedLibraries: Array.from(this.loadedLibraries),
-          loadTimes: this.loadTimes,
-          errors: this.errors,
-          totalLibraries: this.loadedLibraries.size,
-          totalErrors: this.errors.length
-        };
-      }
-    };
-    
-    // Monitor script loading events
-    document.addEventListener('DOMContentLoaded', function() {
-      console.log('🔍 Library Loading Monitor initialized');
-      
-      // Check for already loaded libraries
-      setTimeout(() => {
-        // Check uDSV (our primary CSV parser)
-        if (typeof uDSV !== 'undefined') {
-          window.libraryLogger.logLibraryLoad('uDSV', Date.now(), 'head_script');
-        }
-        
-        // Check Papa Parse (fallback)
-        if (typeof Papa !== 'undefined' && Papa.parse) {
-          window.libraryLogger.logLibraryLoad('PapaParse', Date.now(), 'head_script');
-        }
-        
-        // Check Tippy.js
-        if (typeof tippy !== 'undefined') {
-          window.libraryLogger.logLibraryLoad('Tippy.js', Date.now(), 'head_script');
-        }
-        
-        // Check Popper.js
-        if (typeof Popper !== 'undefined') {
-          window.libraryLogger.logLibraryLoad('Popper.js', Date.now(), 'head_script');
-        }
-      }, 100);
-    });
-    
-    // Global function to display library report (for debugging)
-    window.showLibraryReport = function() {
-      if (window.libraryLogger) {
-        return window.libraryLogger.displayLoadReport();
-      } else {
-        console.error('Library logger not available');
-        return null;
-      }
-    };
-    
-    // Global function to get library report data
-    window.getLibraryReport = function() {
-      if (window.libraryLogger) {
-        return window.libraryLogger.getLoadReport();
-      } else {
-        console.error('Library logger not available');
-        return null;
-      }
-    };
-    
-    // Override script loading to track dynamic loads
-    const originalCreateElement = document.createElement;
-    document.createElement = function(tagName) {
-      const element = originalCreateElement.call(document, tagName);
-      
-      if (tagName.toLowerCase() === 'script') {
-        const originalOnLoad = element.onload;
-        const originalOnError = element.onerror;
-        
-        element.onload = function(event) {
-          const scriptSrc = element.src || 'inline_script';
-          const libraryName = scriptSrc.includes('udsv') ? 'uDSV' :
-                             scriptSrc.includes('papaparse') ? 'PapaParse' :
-                             scriptSrc.includes('tippy') ? 'Tippy.js' :
-                             scriptSrc.includes('popper') ? 'Popper.js' :
-                             scriptSrc.split('/').pop().replace('.js', '') || 'Unknown';
-          
-          window.libraryLogger.logLibraryLoad(libraryName, Date.now(), 'dynamic_load');
-          
-          if (originalOnLoad) {
-            originalOnLoad.call(this, event);
-          }
-        };
-        
-        element.onerror = function(event) {
-          const scriptSrc = element.src || 'inline_script';
-          const libraryName = scriptSrc.includes('udsv') ? 'uDSV' :
-                             scriptSrc.includes('papaparse') ? 'PapaParse' :
-                             scriptSrc.includes('tippy') ? 'Tippy.js' :
-                             scriptSrc.includes('popper') ? 'Popper.js' :
-                             scriptSrc.split('/').pop().replace('.js', '') || 'Unknown';
-          
-          window.libraryLogger.logLibraryError(libraryName, 'Failed to load script: ' + scriptSrc, 'dynamic_load');
-          
-          if (originalOnError) {
-            originalOnError.call(this, event);
-          }
-        };
-      }
-      
-      return element;
-    };
-  </script>
-  <style>
-    body {
-      background: #f4f6fb;
-      color: #22223b;
-      font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
-      margin: 0;
-      height: 100vh;
-      display: flex;
-      flex-direction: row;
-      box-sizing: border-box;
-      overflow-y: auto;
-      overflow-x: hidden;
-    }
-    
-    html {
-      box-sizing: border-box;
-      height: 100%;
-      overflow-y: auto;
-      overflow-x: hidden;
-    }
-    
-    * {
-      box-sizing: border-box;
-    }
-
-    .sidebar {
-      background: #394667;
-      color: #fff;
-      width: 240px;
-      min-width: 240px;
-      height: 100vh;
-      position: fixed;
-      left: 0;
-      top: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: flex-start;
-      box-shadow: 2px 0 8px rgba(0, 0, 0, 0.04);
-      z-index: 10;
-      overflow-y: auto;
-    }
-
-    .sidebar-logo {
-      width: 100%;
-      height: 48px;
-      background: #394667;
-      display: flex;
-      align-items: center;
-      justify-content: flex-start;
-      border-right: 1px solid #fff;
-      border-bottom: 1px solid #fff;
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      flex-shrink: 0;
-    }
-
-    .sidebar-logo img {
-      height: 32px;
-      width: auto;
-      margin-left: 16px;
-      display: block;
-    }
-
-    .sidebar-nav {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      margin-top: 2rem;
-      overflow-y: auto;
-    }
-
-    .sidebar-nav .nav-section {
-      margin-bottom: 1.5rem;
-    }
-
-    .sidebar-nav .nav-link {
-      display: flex;
-      align-items: center;
-      padding: 0.7rem 2rem;
-      color: #fff;
-      text-decoration: none;
-      font-size: 1rem;
-      border-left: 3px solid transparent;
-      transition: background 0.2s, border-color 0.2s;
-      border-radius: 4px 0 0 4px;
-      margin-bottom: 2px;
-    }
-
-    .sidebar-nav .nav-link.active,
-    .sidebar-nav .nav-link:hover {
-      background: rgba(45, 46, 74, 0.7);
-      border-left: 3px solid #e60028;
-      color: #e60028;
-      font-weight: 500;
-    }
-
-    .sidebar-nav .nav-link .nav-icon {
-      margin-right: 0.5rem;
-      font-size: 1rem;
-    }
-
-    .main-content {
-      margin-left: 240px;
-      width: calc(100vw - 240px);
-      display: flex;
-      flex-direction: column;
-      min-height: 100vh;
-    }
-
-    .main-red-banner {
-      background: #e60028;
-      color: #fff;
-      font-size: 1.1rem;
-      font-weight: 700;
-      text-align: center;
-      padding: 0.8rem 0;
-      letter-spacing: 0.5px;
-    }
-
-    .main-header {
-      background: #fff;
-      padding: 1rem 1.5rem;
-      font-size: 1rem;
-      color: #22223b;
-      border-bottom: 1px solid #e5e7eb;
-      min-height: 48px;
-      display: flex;
-      align-items: center;
-    }
-
-    .portal-card {
-      background: #fff;
-      border-radius: 12px;
-      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
-      padding: 2rem;
-      max-width: 1200px;
-      width: calc(100vw - 280px);
-      margin: 1.5rem auto;
-      text-align: center;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      box-sizing: border-box;
-    }
-
-    .pingone-footer {
-      background: #000000;
-      color: #ffffff;
-      text-align: center;
-      padding: 1rem;
-      border-top: 1px solid #333333;
-      margin-top: auto;
-    }
-
-    /* Unified Button Styling */
-    .unified-button {
-      background: #e60028;
-      color: white;
-      border: none;
-      padding: 0.75rem 1.5rem;
-      border-radius: 8px;
-      font-weight: 600;
-      font-size: 0.95rem;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      text-decoration: none;
-      min-width: 120px;
-      margin: 0.25rem;
-    }
-
-    .unified-button:hover {
-      background: #cc0024;
-      transform: translateY(-1px);
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-    }
-
-    .unified-button:active {
-      transform: translateY(0);
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-
-    .unified-button:disabled {
-      background: #9ca3af;
-      cursor: not-allowed;
-      transform: none;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-
-    .unified-button:disabled:hover {
-      background: #9ca3af;
-      transform: none;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-
-    /* Button Row Styling */
-    .button-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.75rem;
-      justify-content: center;
-      margin-top: 1rem;
-    }
-
-    /* Responsive button adjustments */
-    @media (max-width: 768px) {
-      .unified-button {
-        padding: 0.6rem 1.2rem;
-        font-size: 0.9rem;
-        min-width: 100px;
-      }
-      
-      .button-row {
-        gap: 0.5rem;
-      }
-    }
-
-    /* Credentials section styling */
-    .credentials-section {
-      background: #f8fafc;
-      border: 1.5px solid #cbd5e1;
-      border-radius: 12px;
-      padding: 1.5rem;
-      margin-bottom: 1.2rem;
-      width: 100%;
-      max-width: 900px;
-      box-sizing: border-box;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      margin-left: auto;
-      margin-right: auto;
-    }
-
-    /* Section Titles */
-    .section-title {
-      font-size: 1.45rem;
-      font-weight: 700;
-      color: #0033a0;
-      margin-bottom: 1.1rem;
-      text-align: center;
-    }
-
-    .credential-row {
-      display: grid;
-      grid-template-columns: 200px 1fr 45px 45px;
-      align-items: center;
-      gap: 0.5rem;
-      width: 100%;
-      max-width: 800px;
-      margin-bottom: 0.5rem;
-    }
-
-    .credential-label {
-      font-size: 1rem;
-      display: flex;
-      align-items: center;
-      gap: 0.3rem;
-      margin-bottom: 0;
-    }
-
-    .credential-input {
-      height: 2.5rem;
-      font-size: 1rem;
-      padding: 0.5rem 0.8rem;
-      border-radius: 6px;
-      border: 1px solid #cbd5e1;
-      background: #f3f4f6;
-      box-sizing: border-box;
-      width: 100%;
-      max-width: 350px;
-      grid-column: 2;
-    }
-
-    .clear-btn {
-      background: #e5e7eb;
-      color: #0033a0;
-      border: none;
-      border-radius: 6px;
-      padding: 0.5rem 0.8rem;
-      font-size: 1rem;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-
-    .credentials-checkboxes-row {
-      display: flex;
-      align-items: center;
-      gap: 2rem;
-      width: 100%;
-      max-width: 600px;
-      margin: 0.5rem 0;
-      justify-content: flex-start;
-    }
-
-    .credential-checkbox-item {
-      display: flex;
-      align-items: center;
-    }
-
-    .credential-checkbox-label {
-      font-size: 0.95rem;
-      color: #374151;
-      cursor: pointer;
-      user-select: none;
-    }
-
-    /* File section styling */
-    .file-section {
-      background: #f8fafc;
-      border: 1.5px solid #cbd5e1;
-      border-radius: 12px;
-      padding: 1.5rem;
-      margin-bottom: 1.2rem;
-      width: 100%;
-      max-width: 900px;
-      box-sizing: border-box;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      margin-left: auto;
-      margin-right: auto;
-    }
-
-    .file-input-container {
-      width: 100%;
-      max-width: 350px;
-    }
-    
-    .file-input-container input[type="file"] {
-      height: 2.5rem;
-      font-size: 1rem;
-      padding: 0.5rem 0.8rem;
-      border-radius: 6px;
-      border: 1px solid #cbd5e1;
-      background: #f3f4f6;
-      box-sizing: border-box;
-      width: 100%;
-      color: #e60028;
-      cursor: pointer;
-      transition: border-color 0.2s, background-color 0.2s;
-    }
-    
-    .file-input-container input[type="file"]:hover {
-      border-color: #e60028;
-      background: #f8fafc;
-    }
-    
-    .file-input-container input[type="file"]:focus {
-      outline: none;
-      border-color: #e60028;
-      box-shadow: 0 0 0 2px rgba(230, 0, 40, 0.1);
-    }
-
-    .file-checkbox-row {
-      display: flex;
-      align-items: center;
-      margin-top: 0.5rem;
-      justify-content: flex-start;
-      margin-bottom: 1.5rem;
-    }
-
-    .file-checkbox-label {
-      font-size: 0.95rem;
-      color: #374151;
-      cursor: pointer;
-      user-select: none;
-    }
-
-    /* Unified Checkbox Styles */
-    .unified-checkbox {
-      width: 1.3rem;
-      height: 1.3rem;
-      background: #fff;
-      border: 2px solid #e60028;
-      border-radius: 4px;
-      outline: 2px solid #e60028;
-      box-shadow: 0 0 0 2px #fff;
-      margin-right: 0.5rem;
-      vertical-align: middle;
-      appearance: none;
-      -webkit-appearance: none;
-      -moz-appearance: none;
-      position: relative;
-      cursor: pointer;
-      display: inline-block;
-      background-clip: padding-box;
-    }
-
-    .unified-checkbox:checked::after {
-      content: '\2714';
-      color: #0074d9;
-      font-size: 1.1rem;
-      position: absolute;
-      left: 0.18rem;
-      top: 0.02rem;
-      font-weight: bold;
-      pointer-events: none;
-    }
-
-    .unified-checkbox:focus {
-      outline: 2px solid #e60028;
-      border-color: #e60028;
-    }
-
-    /* Responsive adjustments */
-    @media (max-width: 900px) {
-      .credential-row {
-        grid-template-columns: 180px 1fr 40px 40px;
-        gap: 0.3rem;
-      }
-      .credential-label {
-        font-size: 0.9rem;
-      }
-      .credential-input {
-        grid-column: 1;
-        max-width: 100%;
-        font-size: 0.9rem;
-        height: 2.2rem;
-      }
-      .clear-btn {
-        grid-column: 1;
-        justify-self: start;
-        font-size: 0.9rem;
-        padding: 0.3rem 0.6rem;
-      }
-      .credentials-section {
-        padding: 0.8rem;
-      }
-      .credentials-title {
-        font-size: 1.2rem;
-        margin-bottom: 0.6rem;
-      }
-    }
-
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-
-    /* Action Status Box Styles */
-    #actionStatusBox {
-      background: #f3f4f6;
-      border-radius: 12px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.07);
-      padding: 1.5rem 1.5rem 1rem 1.5rem;
-      margin-bottom: 1.2rem;
-      max-width: 600px;
-      margin-left: auto;
-      margin-right: auto;
-      font-size: 1.05rem;
-      color: #22223b;
-      text-align: left;
-      border: 1.5px solid #cbd5e1;
-      display: none;
-      position: relative;
-    }
-    .action-status-row {
-      display: flex;
-      align-items: center;
-      gap: 0.7rem;
-      margin-bottom: 0.7rem;
-    }
-    .action-status-check {
-      color: #16a34a;
-      font-size: 1.7rem;
-      font-weight: bold;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .action-status-spinner {
-      border: 4px solid #e5e7eb;
-      border-top: 4px solid #e60028;
-      border-radius: 50%;
-      width: 28px;
-      height: 28px;
-      animation: spin 1s linear infinite;
-      margin-right: 0.7rem;
-      display: inline-block;
-      vertical-align: middle;
-      flex-shrink: 0;
-    }
-    .action-status-success {
-      color: #16a34a;
-      font-weight: 600;
-      font-size: 1.1rem;
-      margin-bottom: 0.5rem;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-    .action-status-error {
-      background: #fee2e2;
-      color: #b91c1c;
-      border: 1px solid #fca5a5;
-      border-radius: 8px;
-      padding: 0.7rem 1rem;
-      margin-top: 1rem;
-      font-size: 0.98rem;
-      white-space: pre-line;
-      max-height: 120px;
-      overflow-y: auto;
-    }
-    .action-status-estimate {
-      color: #374151;
-      font-size: 0.98rem;
-      margin-bottom: 0.3rem;
-    }
-    .action-status-progress {
-      color: #0033a0;
-      font-size: 1.05rem;
-      margin-bottom: 0.3rem;
-      font-weight: 500;
-    }
-    .action-status-completed {
-      color: #16a34a;
-      font-size: 1.05rem;
-      font-weight: 500;
-      margin-bottom: 0.3rem;
-    }
-
-    /* Custom scrollbar Styling */
-    /* WebKit-based browsers (Chrome, Safari, Edge) */
-    ::-webkit-scrollbar {
-      width: 12px;
-      height: 12px;
-    }
-    
-    ::-webkit-scrollbar-track {
-      background: #f1f1f1;
-      border-radius: 6px;
-    }
-    
-    ::-webkit-scrollbar-thumb {
-      background: #e60028;
-      border-radius: 6px;
-      border: 2px solid #f1f1f1;
-    }
-    
-    ::-webkit-scrollbar-thumb:hover {
-      background: #cc0024;
-    }
-    
-    ::-webkit-scrollbar-corner {
-      background: #f1f1f1;
-    }
-    
-    /* Firefox scrollbar styling */
-    * {
-      scrollbar-width: thin;
-      scrollbar-color: #e60028 #f1f1f1;
-    }
-    
-    /* Fallback for browsers that don't support custom scrollbars */
-    @supports not (scrollbar-color: auto) {
-      * {
-        scrollbar-width: auto;
-      }
-    }
-    
-    /* Ensure scrollbars are visible on specific elements */
-    .sidebar {
-      scrollbar-width: thin;
-      scrollbar-color: #e60028 #394667;
-    }
-    
-    .sidebar::-webkit-scrollbar-track {
-      background: #394667;
-    }
-    
-    .sidebar::-webkit-scrollbar-thumb {
-      background: #e60028;
-      border: 2px solid #394667;
-    }
-    
-    .sidebar::-webkit-scrollbar-thumb:hover {
-      background: #cc0024;
-    }
-    
-    .action-status-error {
-      scrollbar-width: thin;
-      scrollbar-color: #e60028 #fee2e2;
-    }
-    
-    .action-status-error::-webkit-scrollbar-track {
-      background: #fee2e2;
-    }
-    
-    .action-status-error::-webkit-scrollbar-thumb {
-      background: #e60028;
-      border: 2px solid #fee2e2;
-    }
-    
-    .action-status-error::-webkit-scrollbar-thumb:hover {
-      background: #cc0024;
-    }
-
-    /* Custom Tooltip Styling */
-    .custom-tooltip {
-      position: relative;
-      display: inline-block;
-      cursor: pointer;
-    }
-
-    .custom-tooltip .tooltip-icon {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 16px;
-      height: 16px;
-      border-radius: 50%;
-      background: #0033a0;
-      color: white;
-      font-size: 11px;
-      font-weight: bold;
-      margin-left: 4px;
-      transition: background-color 0.2s;
-    }
-
-    .custom-tooltip:hover .tooltip-icon {
-      background: #002266;
-    }
-
-    .custom-tooltip .tooltip-content {
-      position: absolute;
-      bottom: 125%;
-      left: 50%;
-      transform: translateX(-50%);
-      background: white;
-      color: black;
-      padding: 8px 12px;
-      border-radius: 6px;
-      font-size: 0.875rem;
-      line-height: 1.4;
-      white-space: normal;
-      z-index: 1000;
-      opacity: 0;
-      visibility: hidden;
-      transition: opacity 0.2s, visibility 0.2s;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-      pointer-events: none;
-      max-width: 200px;
-      min-width: 120px;
-      text-align: center;
-      border: 1px solid #e5e7eb;
-      word-wrap: break-word;
-      overflow-wrap: break-word;
-    }
-
-    .custom-tooltip .tooltip-content::after {
-      content: '';
-      position: absolute;
-      top: 100%;
-      left: 50%;
-      transform: translateX(-50%);
-      border: 5px solid transparent;
-      border-top-color: white;
-    }
-
-    .custom-tooltip.show .tooltip-content {
-      opacity: 1;
-      visibility: visible;
-    }
-
-    /* Mobile tooltip support */
-    @media (max-width: 768px) {
-      .custom-tooltip .tooltip-content {
-        white-space: normal;
-        max-width: 180px;
-        min-width: 100px;
-        font-size: 0.8rem;
-        word-wrap: break-word;
-        overflow-wrap: break-word;
-      }
-    }
-
-    /* Enhanced input tooltips */
-    .enhanced-input {
-      position: relative;
-    }
-
-    .enhanced-input:hover::after,
-    .enhanced-input:focus::after {
-      content: attr(data-tooltip);
-      position: absolute;
-      bottom: 100%;
-      left: 50%;
-      transform: translateX(-50%);
-      background: white;
-      color: black;
-      padding: 6px 10px;
-      border-radius: 4px;
-      font-size: 0.8rem;
-      white-space: normal;
-      z-index: 1000;
-      margin-bottom: 5px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-      border: 1px solid #e5e7eb;
-      max-width: 180px;
-      min-width: 100px;
-      word-wrap: break-word;
-      overflow-wrap: break-word;
-    }
-
-    .enhanced-input:hover::before,
-    .enhanced-input:focus::before {
-      content: '';
-      position: absolute;
-      bottom: 100%;
-      left: 50%;
-      transform: translateX(-50%);
-      border: 4px solid transparent;
-      border-top-color: white;
-      margin-bottom: 1px;
-    }
-
-    /* Button tooltips */
-    .button-tooltip {
-      position: relative;
-    }
-
-    .button-tooltip:hover::after {
-      content: attr(data-tooltip);
-      position: absolute;
-      bottom: 100%;
-      left: 50%;
-      transform: translateX(-50%);
-      background: white;
-      color: black;
-      padding: 6px 10px;
-      border-radius: 4px;
-      font-size: 0.8rem;
-      white-space: normal;
-      z-index: 1000;
-      margin-bottom: 5px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-      border: 1px solid #e5e7eb;
-      max-width: 180px;
-      min-width: 100px;
-      word-wrap: break-word;
-      overflow-wrap: break-word;
-    }
-
-    .button-tooltip:hover::before {
-      content: '';
-      position: absolute;
-      bottom: 100%;
-      left: 50%;
-      transform: translateX(-50%);
-      border: 4px solid transparent;
-      border-top-color: white;
-      margin-bottom: 1px;
-    }
-
-    /* Custom scrollbar styles */
-    ::-webkit-scrollbar {
-      width: 12px;
-    }
-    
-    ::-webkit-scrollbar-track {
-      background: #f1f1f1;
-      border-radius: 6px;
-    }
-    
-    ::-webkit-scrollbar-thumb {
-      background: #e60028;
-      border-radius: 6px;
-    }
-    
-    ::-webkit-scrollbar-thumb:hover {
-      background: #b8001c;
-    }
-    
-    /* Info icon tooltip styles */
-    .info-icon {
-      display: inline-block;
-      width: 16px;
-      height: 16px;
-      background: #ffffff;
-      color: #0033a0;
-      border-radius: 50%;
-      text-align: center;
-      line-height: 16px;
-      font-size: 12px;
-      font-weight: bold;
-      cursor: help;
-      margin-left: 6px;
-      position: relative;
-      transition: all 0.2s;
-      border: 1.5px solid #0033a0;
-    }
-    
-    .info-icon:hover {
-      background: #f8fafc;
-      border-color: #002266;
-      color: #002266;
-      transform: scale(1.1);
-    }
-    
-    .info-icon::before {
-      content: "ℹ";
-      font-style: normal;
-    }
-    
-    .info-tooltip {
-      position: relative;
-      display: inline-block;
-    }
-    
-    .info-tooltip .tooltip-content {
-      visibility: hidden;
-      opacity: 0;
-      position: absolute;
-      bottom: 125%;
-      left: 50%;
-      transform: translateX(-50%);
-      background: white;
-      color: black;
-      padding: 8px 12px;
-      border-radius: 8px;
-      font-size: 0.9rem;
-      white-space: normal;
-      z-index: 1000;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      transition: opacity 0.2s, visibility 0.2s;
-      pointer-events: none;
-      max-width: 200px;
-      min-width: 120px;
-      text-align: center;
-      border: 1px solid #e5e7eb;
-      word-wrap: break-word;
-      overflow-wrap: break-word;
-    }
-    
-    .info-tooltip .tooltip-content::after {
-      content: "";
-      position: absolute;
-      top: 100%;
-      left: 50%;
-      margin-left: -5px;
-      border-width: 5px;
-      border-style: solid;
-      border-color: white transparent transparent transparent;
-    }
-    
-    .info-tooltip:hover .tooltip-content,
-    .info-tooltip:focus .tooltip-content {
-      visibility: visible;
-      opacity: 1;
-    }
-    
-    /* Mobile touch support */
-    @media (hover: none) and (pointer: coarse) {
-      .info-tooltip .tooltip-content {
-        display: none;
-      }
-      
-      .info-tooltip:active .tooltip-content {
-        display: block;
-        visibility: visible;
-        opacity: 1;
-      }
-    }
-
-    /* Custom tippy.js theme for PingOne */
-    .tippy-box[data-theme~='pingone'] {
-      background-color: #f2f2f2;
-      color: #22223b;
-      min-width: 140px;
-      max-width: 260px;
-      padding: 8px 12px;
-      font-size: 14px;
-      line-height: 1.6;
-      border-radius: 8px;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.10);
-      border: 1px solid #e5e7eb;
-      text-align: left;
-    }
-    .tippy-box[data-theme~='pingone'][data-placement^='top'] > .tippy-arrow::before {
-      border-top-color: #f2f2f2;
-    }
-    .tippy-box[data-theme~='pingone'][data-placement^='bottom'] > .tippy-arrow::before {
-      border-bottom-color: #f2f2f2;
-    }
-    .tippy-box[data-theme~='pingone'][data-placement^='left'] > .tippy-arrow::before {
-      border-left-color: #f2f2f2;
-    }
-    .tippy-box[data-theme~='pingone'][data-placement^='right'] > .tippy-arrow::before {
-      border-right-color: #f2f2f2;
-    }
-    
-    /* Info icon tooltip styles */
-    .info-icon {
-      display: inline-block;
-      width: 16px;
-      height: 16px;
-      background: #ffffff;
-      color: #0033a0;
-      border-radius: 50%;
-      text-align: center;
-      line-height: 16px;
-      font-size: 12px;
-      font-weight: bold;
-      cursor: help;
-      margin-left: 6px;
-      position: relative;
-      transition: all 0.2s;
-      border: 1.5px solid #0033a0;
-    }
-    
-    .info-icon:hover {
-      background: #f8fafc;
-      border-color: #002266;
-      color: #002266;
-      transform: scale(1.1);
-    }
-    
-    .info-icon::before {
-      content: "ℹ";
-      font-style: normal;
-    }
-  </style>
+  <!-- Modular JavaScript files -->
+  <script src="index-utils.js"></script>
+  <script src="index-core.js"></script>
+  <script src="index-ui.js"></script>
 </head>
 
 <body>
@@ -1252,7 +144,7 @@
       <!-- Actions Section -->
       <div class="file-section">
         <div class="section-title">Actions</div>
-        <div class="file-input-container">
+        <div class="file-input-container" style="border: 1px solid #e0e0e0; border-radius: 12px; padding: 1.5rem; background-color: #fdfdfd; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
           <input type="file" id="csvFile" accept=".csv" class="enhanced-input" data-tippy-content="Select CSV file with user data" />
           <div class="file-checkbox-row">
             <input type="checkbox" id="saveFileNameCheckbox" class="unified-checkbox enhanced-input" data-tippy-content="Save file name to browser storage" />
@@ -1375,6 +267,7 @@
             animation: spin 1s linear infinite;
             margin: 0 auto 1.5rem auto;
           "></div>
+          
           <div id="modalTitle" style="
             font-size: 1.3rem;
             font-weight: 600;
@@ -1387,15 +280,15 @@
             margin-bottom: 1rem;
           ">Please wait while we process your request</div>
           <div id="modalProgress" style="
-            font-size: 0.9rem;
-            color: #9ca3af;
+            font-size: 0.95rem;
+            color: #0033a0;
+            font-weight: 500;
           "></div>
-          <button id="modalCancelBtn" style="display: none;">Cancel</button>
+        </div>
       </div>
-    </div>
       
-      <!-- Credential Validation Error Modal -->
-      <div id="credentialErrorModal" style="
+      <!-- Unified Popup System -->
+      <div id="unifiedPopup" style="
         display: none;
         position: fixed;
         top: 0;
@@ -1411,30 +304,32 @@
           top: 50%;
           left: 50%;
           transform: translate(-50%, -50%);
-          background: white;
-          border-radius: 16px;
+          background: #f8f9fa;
+          border: 1px solid #000;
+          border-radius: 12px;
           padding: 0;
-          box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-          max-width: 600px;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+          max-width: 500px;
           width: 90%;
           max-height: 90vh;
           overflow-y: auto;
         ">
           <!-- Header -->
           <div style="
-            background: #dc2626;
-            color: white;
+            background: #e9ecef;
+            color: #212529;
             padding: 1.5rem 2rem 1rem 2rem;
-            border-radius: 16px 16px 0 0;
+            border-radius: 12px 12px 0 0;
             position: relative;
+            border-bottom: 1px solid #000;
           ">
-            <button id="closeCredentialErrorModal" style="
+            <button id="closeUnifiedPopup" style="
               position: absolute;
               top: 1rem;
               right: 1.5rem;
               background: none;
               border: none;
-              color: white;
+              color: #212529;
               font-size: 1.5rem;
               cursor: pointer;
               padding: 0;
@@ -1445,43 +340,32 @@
               justify-content: center;
               border-radius: 50%;
               transition: background-color 0.2s;
-            " onmouseover="this.style.backgroundColor='rgba(255,255,255,0.2)'" onmouseout="this.style.backgroundColor='transparent'">&times;</button>
-            <h2 style="margin: 0; color: white; font-size: 1.5rem; font-weight: 600;">Credentials Required</h2>
+            " onmouseover="this.style.backgroundColor='rgba(0,0,0,0.1)'" onmouseout="this.style.backgroundColor='transparent'">✖</button>
+            <h2 id="popupTitle" style="
+              margin: 0;
+              color: #212529;
+              font-size: 1.5rem;
+              font-weight: 600;
+            ">Popup Title</h2>
           </div>
           
-          <!-- Content -->
+          <!-- Body -->
           <div style="padding: 2rem;">
-            <div style="margin-bottom: 1.5rem; color: #374151; line-height: 1.6;">
-              <p style="font-size: 1.1rem; margin-bottom: 1rem;">Your credentials are missing or invalid. Please update them in Settings.</p>
-              <p style="color: #6b7280; font-size: 0.95rem;">You need valid PingOne credentials to perform user operations. Please configure your Environment ID, Client ID, and Client Secret in the Settings page.</p>
+            <div id="popupContent" style="
+              color: #212529;
+              line-height: 1.6;
+              margin-bottom: 1.5rem;
+            ">
+              <!-- Content will be populated dynamically -->
             </div>
             
             <!-- Buttons -->
-            <div style="display: flex; gap: 1rem; justify-content: flex-end;">
-              <button onclick="closeCredentialErrorModal()" style="
-                background: #f3f4f6;
-                color: #374151;
-                border: 1px solid #d1d5db;
-                padding: 0.75rem 1.5rem;
-                border-radius: 8px;
-                font-weight: 600;
-                cursor: pointer;
-                transition: background-color 0.2s;
-              " onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">
-                OK
-              </button>
-              <button onclick="openSettings()" style="
-                background: #e60028;
-                color: white;
-                border: 1px solid #e60028;
-                padding: 0.75rem 1.5rem;
-                border-radius: 8px;
-                font-weight: 600;
-                cursor: pointer;
-                transition: background-color 0.2s;
-              " onmouseover="this.style.background='#cc0024'" onmouseout="this.style.background='#e60028'">
-                Open Settings
-              </button>
+            <div id="popupButtons" style="
+              display: flex;
+              gap: 1rem;
+              justify-content: flex-end;
+            ">
+              <!-- Buttons will be populated dynamically -->
             </div>
           </div>
         </div>
@@ -1490,90 +374,6 @@
     
     <div class="pingone-footer">
       &copy; 2024 <strong>Ping Identity</strong>. All rights reserved.
-    </div>
-  </div>
-
-  <!-- Unified Popup System -->
-  <div id="unifiedPopup" style="
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.6);
-    z-index: 10000;
-    backdrop-filter: blur(2px);
-  ">
-    <div style="
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: #f8f9fa;
-      border: 1px solid #000;
-      border-radius: 12px;
-      padding: 0;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-      max-width: 500px;
-      width: 90%;
-      max-height: 90vh;
-      overflow-y: auto;
-    ">
-      <!-- Header -->
-      <div style="
-        background: #e9ecef;
-        color: #212529;
-        padding: 1.5rem 2rem 1rem 2rem;
-        border-radius: 12px 12px 0 0;
-        position: relative;
-        border-bottom: 1px solid #000;
-      ">
-        <button id="closeUnifiedPopup" style="
-          position: absolute;
-          top: 1rem;
-          right: 1.5rem;
-          background: none;
-          border: none;
-          color: #212529;
-          font-size: 1.5rem;
-          cursor: pointer;
-          padding: 0;
-          width: 30px;
-          height: 30px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          border-radius: 50%;
-          transition: background-color 0.2s;
-        " onmouseover="this.style.backgroundColor='rgba(0,0,0,0.1)'" onmouseout="this.style.backgroundColor='transparent'">✖</button>
-        <h2 id="popupTitle" style="
-          margin: 0;
-          color: #212529;
-          font-size: 1.5rem;
-          font-weight: 600;
-        ">Popup Title</h2>
-      </div>
-      
-      <!-- Body -->
-      <div style="padding: 2rem;">
-        <div id="popupContent" style="
-          color: #212529;
-          line-height: 1.6;
-          margin-bottom: 1.5rem;
-        ">
-          <!-- Content will be populated dynamically -->
-    </div>
-        
-        <!-- Buttons -->
-        <div id="popupButtons" style="
-          display: flex;
-          gap: 1rem;
-          justify-content: flex-end;
-        ">
-          <!-- Buttons will be populated dynamically -->
-  </div>
-      </div>
     </div>
   </div>
 
@@ -3923,25 +2723,32 @@
           resolve(0);
           return;
         }
-        
         try {
           // Ensure CSV parser is loaded
           await ensureCSVParserLoaded();
-          
-          Papa.parse(file, {
-            header: true, // Treat first row as header
-            skipEmptyLines: true,
-            complete: function(results) {
-              const rowCount = results.data.length;
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            try {
+              const csvString = e.target.result;
+              const result = uDSV.parse(csvString, {
+                header: true,
+                skipEmptyLines: true
+              });
+              const rowCount = result.data ? result.data.length : 0;
               globalCSVRowCount = rowCount; // Store globally
               resolve(rowCount);
-            },
-            error: function(error) {
+            } catch (error) {
               console.error('Error parsing CSV for row count:', error);
               globalCSVRowCount = 0;
               reject(error);
             }
-          });
+          };
+          reader.onerror = function(error) {
+            console.error('Error reading file for row count:', error);
+            globalCSVRowCount = 0;
+            reject(error);
+          };
+          reader.readAsText(file);
         } catch (error) {
           console.error('Failed to load CSV parser:', error);
           globalCSVRowCount = 0;
@@ -4245,9 +3052,6 @@
         if (typeof uDSV !== 'undefined') {
           window.libraryLogger.logLibraryLoad('uDSV', Date.now(), 'head_script');
         }
-        if (typeof Papa !== 'undefined' && Papa.parse) {
-          window.libraryLogger.logLibraryLoad('PapaParse', Date.now(), 'head_script');
-        }
         if (typeof tippy !== 'undefined') {
           window.libraryLogger.logLibraryLoad('Tippy.js', Date.now(), 'head_script');
         }
@@ -4372,6 +3176,42 @@
       if (saveFileNameCheckbox) {
         saveFileNameCheckbox.addEventListener('change', handleSaveCheckboxChange);
       }
+    }
+
+    // Function to ensure uDSV CSV parser is loaded
+    function ensureCSVParserLoaded() {
+      return new Promise((resolve, reject) => {
+        // Check if uDSV is already loaded
+        if (typeof uDSV !== 'undefined') {
+          console.log('✅ uDSV CSV parser is already loaded');
+          resolve();
+          return;
+        }
+        
+        // Wait for uDSV to load
+        let attempts = 0;
+        const maxAttempts = 100; // 10 seconds max wait
+        
+        const checkuDSV = () => {
+          attempts++;
+          
+          if (typeof uDSV !== 'undefined') {
+            console.log('✅ uDSV loaded after waiting');
+            resolve();
+            return;
+          }
+          
+          if (attempts >= maxAttempts) {
+            console.error('❌ uDSV failed to load after 10 seconds');
+            reject(new Error('uDSV CSV parser failed to load'));
+            return;
+          }
+          
+          setTimeout(checkuDSV, 100);
+        };
+        
+        checkuDSV();
+      });
     }
   </script>
 </body>

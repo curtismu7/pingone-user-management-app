@@ -78,5 +78,32 @@
       display: none;
       transition: background 0.2s, color 0.2s;
     " type="button">Cancel</button>
+
+    <div id="spinnerSummary" style="margin-top:1rem;font-size:1.1rem;color:#0033a0;"></div>
   </div>
-</div> 
+</div>
+
+<script>
+function updateSpinnerSummary(action, successCount, skippedCount, errorCount) {
+  const spinnerSummary = document.getElementById('spinnerSummary');
+  let summary = '';
+  if (action === 'Imported') {
+    summary = `✅ <strong>${successCount}</strong> users imported`;
+    if (skippedCount > 0) summary += `, <strong>${skippedCount}</strong> skipped`;
+    if (errorCount > 0) summary += `, <strong>${errorCount}</strong> errors`;
+  } else if (action === 'Deleted') {
+    summary = `🗑️ <strong>${successCount}</strong> users deleted`;
+    if (skippedCount > 0) summary += `, <strong>${skippedCount}</strong> not found/skipped`;
+    if (errorCount > 0) summary += `, <strong>${errorCount}</strong> errors`;
+  } else if (action === 'Modified') {
+    summary = `✏️ <strong>${successCount}</strong> users modified`;
+    if (skippedCount > 0) summary += `, <strong>${skippedCount}</strong> skipped`;
+    if (errorCount > 0) summary += `, <strong>${errorCount}</strong> errors`;
+  } else {
+    summary = `<strong>${successCount}</strong> processed`;
+    if (skippedCount > 0) summary += `, <strong>${skippedCount}</strong> skipped`;
+    if (errorCount > 0) summary += `, <strong>${errorCount}</strong> errors`;
+  }
+  spinnerSummary.innerHTML = summary;
+}
+</script> 

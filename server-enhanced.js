@@ -19,12 +19,13 @@
 
 const express = require('express');
 const multer = require('multer');
-const Papa = require('papaparse');
+const uDSV = require('udsv');
 const axios = require('axios');
 const fs = require('fs');
 const cors = require('cors');
 const os = require('os');
 const path = require('path');
+const { PersistentNodeCache } = require('persistent-node-cache');
 
 // Import configuration and services
 const { config, validateConfig } = require('./config');
@@ -42,6 +43,132 @@ const {
 
 // Validate configuration on startup
 validateConfig();
+
+// Token caching system to reduce API calls
+const tokenCache = new PersistentNodeCache('token-cache', 1000); // 1s backup interval
+const TOKEN_CACHE_DURATION = 50 * 60 * 1000; // 50 minutes (PingOne tokens expire in 1 hour)
+
+// Token cache management
+const tokenManager = {
+  // Get cached token if valid, otherwise return null
+  getCachedToken: function(environmentId, clientId, clientSecret) {
+    const cacheKey = this.generateCacheKey(environmentId, clientId, clientSecret);
+    const cached = tokenCache.get(cacheKey);
+    
+    if (cached && this.isTokenValid(cached)) {
+      const remainingTime = Math.round((cached.expiresAt - Date.now()) / 60000);
+      console.log(`📋 Using cached token for environment ${environmentId.substring(0, 8)}...`);
+      logStatus(`TOKEN_CACHE | Retrieved from cache | Environment: ${environmentId.substring(0, 8)}... | Remaining time: ${remainingTime} minutes`);
+      return cached.token;
+    }
+    
+    if (cached) {
+      console.log(`⏰ Cached token expired for environment ${environmentId.substring(0, 8)}...`);
+      logStatus(`TOKEN_CACHE | Token expired | Environment: ${environmentId.substring(0, 8)}... | Expired at: ${new Date(cached.expiresAt).toISOString()}`);
+      tokenCache.del(cacheKey);
+    }
+    
+    return null;
+  },
+  
+  // Store token in cache with expiration
+  cacheToken: function(environmentId, clientId, clientSecret, token) {
+    const cacheKey = this.generateCacheKey(environmentId, clientId, clientSecret);
+    const cacheEntry = {
+      token: token,
+      expiresAt: Date.now() + TOKEN_CACHE_DURATION,
+      createdAt: Date.now()
+    };
+    
+    tokenCache.set(cacheKey, cacheEntry);
+    const expiresIn = TOKEN_CACHE_DURATION / 60000;
+    console.log(`💾 Cached token for environment ${environmentId.substring(0, 8)}... (expires in ${expiresIn} minutes)`);
+    logStatus(`TOKEN_CACHE | Token cached | Environment: ${environmentId.substring(0, 8)}... | Expires in: ${expiresIn} minutes | Expires at: ${new Date(cacheEntry.expiresAt).toISOString()}`);
+  },
+  
+  // Generate unique cache key for credentials
+  generateCacheKey: function(environmentId, clientId, clientSecret) {
+    return `${environmentId}:${clientId}:${clientSecret}`;
+  },
+  
+  // Check if cached token is still valid
+  isTokenValid: function(cacheEntry) {
+    return Date.now() < cacheEntry.expiresAt;
+  },
+  
+  // Get token status (cached, expired, or not found)
+  getTokenStatus: function(environmentId, clientId, clientSecret) {
+    const cacheKey = this.generateCacheKey(environmentId, clientId, clientSecret);
+    const cached = tokenCache.get(cacheKey);
+    
+    if (!cached) {
+      return { status: 'not_found', message: 'No cached token' };
+    }
+    
+    if (this.isTokenValid(cached)) {
+      const remainingTime = Math.round((cached.expiresAt - Date.now()) / 60000);
+      return { 
+        status: 'valid', 
+        message: `Token valid for ${remainingTime} more minutes`,
+        expiresIn: remainingTime
+      };
+    } else {
+      return { status: 'expired', message: 'Token has expired' };
+    }
+  },
+  
+  // Clear expired tokens (cleanup function)
+  cleanupExpiredTokens: function() {
+    let cleanedCount = 0;
+    const keys = tokenCache.keys();
+    for (const key of keys) {
+      const value = tokenCache.get(key);
+      if (value && !this.isTokenValid(value)) {
+        tokenCache.del(key);
+        cleanedCount++;
+      }
+    }
+    if (cleanedCount > 0) {
+      console.log(`🧹 Cleaned up ${cleanedCount} expired tokens`);
+      logStatus(`TOKEN_CACHE | Cleanup completed | Expired tokens removed: ${cleanedCount}`);
+    }
+  },
+  
+  // Get or fetch token (main function to use)
+  getOrFetchToken: async function(environmentId, clientId, clientSecret) {
+    const startTime = Date.now();
+    
+    // Try to get cached token first
+    const cachedToken = this.getCachedToken(environmentId, clientId, clientSecret);
+    if (cachedToken) {
+      const duration = Date.now() - startTime;
+      logStatus(`TOKEN_RETRIEVAL | Cache hit | Environment: ${environmentId.substring(0, 8)}... | Duration: ${duration}ms | Source: cache`);
+      return { token: cachedToken, source: 'cache' };
+    }
+    
+    // Fetch new token if not cached or expired
+    console.log(`🔄 Fetching new token for environment ${environmentId.substring(0, 8)}...`);
+    logStatus(`TOKEN_RETRIEVAL | API fetch started | Environment: ${environmentId.substring(0, 8)}... | Source: API`);
+    
+    const newToken = await authService.getWorkerToken(environmentId, clientId, clientSecret);
+    
+    if (newToken) {
+      this.cacheToken(environmentId, clientId, clientSecret, newToken);
+      const duration = Date.now() - startTime;
+      logStatus(`TOKEN_RETRIEVAL | API fetch successful | Environment: ${environmentId.substring(0, 8)}... | Duration: ${duration}ms | Source: API`);
+      return { token: newToken, source: 'api' };
+    } else {
+      const duration = Date.now() - startTime;
+      logStatus(`TOKEN_RETRIEVAL | API fetch failed | Environment: ${environmentId.substring(0, 8)}... | Duration: ${duration}ms | Source: API`);
+      return { token: null, source: 'api' };
+    }
+  }
+};
+
+// Clean up expired tokens every 10 minutes
+setInterval(() => {
+  tokenManager.cleanupExpiredTokens();
+}, 10 * 60 * 1000);
 
 const app = express();
 
@@ -152,7 +279,7 @@ function logOperationStart(operationType) {
 // Helper to write a run header with asterisks and timestamp
 function writeRunHeader() {
   const now = new Date().toLocaleString();
-  safeWriteLog(`\n********************\n* Run started: ${now} *\n********************\n`);
+  safeAppendLog(`\n********************\n* Run started: ${now} *\n********************\n`);
   return Date.now(); // Return start time
 }
 
@@ -168,7 +295,11 @@ function writeRunFooter(startTime) {
 
 // At server startup, create or overwrite the log file with a header
 const logStartTime = new Date().toLocaleString();
-safeWriteLog(`********\n${logStartTime}\nStart of Logging\n`);
+if (!fs.existsSync(statusLogPath)) {
+  safeWriteLog(`********\n${logStartTime}\nStart of Logging\n`);
+} else {
+  safeAppendLog(`\n********\n${logStartTime}\nServer Restarted\n`);
+}
 
 // Log all endpoint calls
 function logStatus(message) {
@@ -223,24 +354,30 @@ app.post('/get-worker-token', authRateLimiter, validateInput, async (req, res) =
     
     logStatus(`/get-worker-token | validation passed`);
     
-    // Get worker token with retry logic
-    const tokenResult = await authService.getWorkerToken(environmentId, clientId, clientSecret);
+    // Get token status first
+    const tokenStatus = tokenManager.getTokenStatus(environmentId, clientId, clientSecret);
     
-    if (tokenResult.success) {
-      logStatus(`/get-worker-token | success`);
+    // Get or fetch token using cache
+    const tokenResult = await tokenManager.getOrFetchToken(environmentId, clientId, clientSecret);
+    
+    if (tokenResult.token) {
+      logStatus(`/get-worker-token | success (${tokenResult.source})`);
       writeRunFooter(startTime);
       res.json({
         success: true,
-        accessToken: tokenResult.accessToken,
-        expiresIn: tokenResult.expiresIn,
+        access_token: tokenResult.token,
+        token_source: tokenResult.source,
+        token_status: tokenStatus,
+        cached: tokenResult.source === 'cache',
         timestamp: new Date().toISOString()
       });
     } else {
-      logStatus(`/get-worker-token | failed: ${tokenResult.error}`);
+      logStatus(`/get-worker-token | failed: No token received`);
       writeRunFooter(startTime);
       res.status(500).json({
         success: false,
-        error: tokenResult.error,
+        error: 'Failed to obtain access token',
+        token_status: tokenStatus,
         timestamp: new Date().toISOString()
       });
     }
@@ -256,11 +393,80 @@ app.post('/get-worker-token', authRateLimiter, validateInput, async (req, res) =
   }
 });
 
+// Token status check endpoint (no API calls)
+app.post('/check-token-status', authRateLimiter, validateInput, async (req, res) => {
+  const startTime = writeRunHeader();
+  
+  try {
+    const { environmentId, clientId, clientSecret } = req.body;
+    
+    logStatus(`/check-token-status | start`);
+    
+    // Validate credentials
+    const validationResult = authService.validateAllCredentials(environmentId, clientId, clientSecret);
+    if (!validationResult.isValid) {
+      logStatus(`/check-token-status | validation failed: ${validationResult.errors.join(', ')}`);
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid credentials',
+        details: validationResult.errors,
+        timestamp: new Date().toISOString()
+      });
+    }
+    
+    logStatus(`/check-token-status | validation passed`);
+    
+    // Get token status from cache
+    const tokenStatus = tokenManager.getTokenStatus(environmentId, clientId, clientSecret);
+    
+    logStatus(`/check-token-status | success`);
+    writeRunFooter(startTime);
+    
+    res.json({
+      success: true,
+      token_status: tokenStatus,
+      has_cached_token: tokenStatus.status === 'valid',
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    logStatus(`/check-token-status | error: ${error.message}`);
+    writeRunFooter(startTime);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      details: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+// Test endpoint to demonstrate token caching (for development only)
+app.post('/test-token-cache', (req, res) => {
+  const { environmentId, clientId, clientSecret } = req.body;
+  
+  // Create a mock token for testing
+  const mockToken = `mock_token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  
+  // Cache the mock token
+  tokenManager.cacheToken(environmentId, clientId, clientSecret, mockToken);
+  
+  // Get the status
+  const tokenStatus = tokenManager.getTokenStatus(environmentId, clientId, clientSecret);
+  
+  res.json({
+    success: true,
+    message: 'Mock token cached for testing',
+    mock_token: mockToken,
+    token_status: tokenStatus,
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Library event logging endpoint
 app.post('/log-library-event', (req, res) => {
   try {
     const { event, data, userAgent, url } = req.body;
-    
     const logEntry = {
       timestamp: new Date().toISOString(),
       event: event,
@@ -269,15 +475,17 @@ app.post('/log-library-event', (req, res) => {
       url: url,
       ip: req.ip || req.connection.remoteAddress
     };
-    
     // Log to console with emoji for easy identification
     const emoji = event === 'library_loaded' ? '📚' : '❌';
     console.log(`${emoji} Library Event: ${data.library} | ${event} | ${data.source} | ${data.timestamp}`);
-    
-    // Append to library events log file
+    // Append to library events log file (JSON)
     const logMessage = JSON.stringify(logEntry) + '\n';
     fs.appendFileSync('library-events.log', logMessage);
-    
+    // Also append a human-readable log to import-status.log for library_loaded events
+    if (event === 'library_loaded') {
+      const readableLog = `Library Loaded: ${data.library} | Time: ${data.timestamp} | Source: ${data.source} | Duration: ${data.duration}ms\n`;
+      fs.appendFileSync(statusLogPath, readableLog);
+    }
     res.json({ success: true, message: 'Library event logged successfully' });
   } catch (error) {
     console.error('Error logging library event:', error);
@@ -382,17 +590,25 @@ app.post('/import-users', uploadRateLimiter, upload.single('csv'), validateInput
       res.write(JSON.stringify({ error: 'Invalid credentials format.', details: validation.errors }) + '\n');
       return res.end();
     }
-    const accessToken = await authService.getWorkerToken(environmentId, clientId, clientSecret);
-    const csvData = fs.readFileSync(filePath, 'utf8');
-    const results = Papa.parse(csvData, {
-      header: true,
-      skipEmptyLines: true,
-      error: (error) => { throw new Error(`CSV parsing error: ${error.message}`); }
-    });
-    if (results.errors.length > 0) {
-      throw new Error(`CSV parsing errors: ${results.errors.map(e => e.message).join(', ')}`);
+    
+    // Get or fetch token using cache
+    const tokenResult = await tokenManager.getOrFetchToken(environmentId, clientId, clientSecret);
+    if (!tokenResult.token) {
+      logStatus(`/import-users | token_fetch_failed`);
+      writeRunFooter(startTime);
+      res.write(JSON.stringify({ error: 'Failed to obtain access token' }) + '\n');
+      return res.end();
     }
-    const users = results.data;
+    
+    const accessToken = tokenResult.token;
+    logStatus(`/import-users | token_obtained (${tokenResult.source})`);
+    
+    const csvData = fs.readFileSync(filePath, 'utf8');
+    const importResult = uDSV.parse(csvData, { header: true, skipEmptyLines: true });
+    if (importResult.errors.length > 0) {
+      throw new Error(`CSV parsing errors: ${importResult.errors.map(e => e.message).join(', ')}`);
+    }
+    const users = importResult.data;
     if (users.length > config.validation.maxUsersPerImport) {
       throw new Error(`Too many users. Maximum allowed: ${config.validation.maxUsersPerImport}`);
     }
@@ -419,15 +635,164 @@ app.post('/import-users', uploadRateLimiter, upload.single('csv'), validateInput
       }
       try {
         const user = users[i];
-        // Simulate logic: try to create, if exists, modify, else skip
-        // For demo, treat all as added
-        await createUserWithRetry(user, environmentId, accessToken);
-        addedCount++;
-        logStatus(`/import-users | user_${i + 1}_added | ${user.username || user.email}`);
+        
+        if (mode === 'modify') {
+          // Handle modify mode - find existing user and update
+          const foundUsers = await findUsersByUsername(user.username, environmentId, accessToken);
+          if (foundUsers.length === 0) {
+            // User not found, skip
+            logStatus(`/import-users | ${user.username} | skipped`);
+            skippedCount++;
+          } else {
+            // User exists, update
+            const userId = foundUsers[0].id;
+            const data = prepareUserData(user);
+            let updateData = {};
+            
+            // Map checkbox IDs to user fields
+            const attrMap = {
+              modAttrFirstName: ['name', 'given'],
+              modAttrLastName: ['name', 'family'],
+              modAttrEmail: ['email'],
+              modAttrUsername: ['username'],
+              modAttrPassword: ['password'],
+              modAttrPopulation: ['population', 'id'],
+              modAttrActive: ['active'],
+              modAttrTitle: ['title'],
+              modAttrPhone: ['phoneNumbers'],
+              modAttrAddress: ['address'],
+              modAttrLocale: ['locale'],
+              modAttrTimezone: ['timezone'],
+              modAttrExternalId: ['externalId'],
+              modAttrType: ['type'],
+              modAttrNickname: ['nickname']
+            };
+            
+            // Get modifyAttributes from request body
+            const modifyAttributes = req.body.modifyAttributes ? JSON.parse(req.body.modifyAttributes) : [];
+            const modifyMode = req.body.modifyMode || 'changed';
+            
+            // If no modifyAttributes, allow all (legacy behavior)
+            const allowAll = !modifyAttributes || modifyAttributes.length === 0;
+            
+            if (modifyMode === 'all') {
+              // Only include allowed fields
+              for (const key in data) {
+                let allowed = false;
+                if (allowAll) {
+                  allowed = true;
+                } else {
+                  for (const attr of modifyAttributes) {
+                    if (!attrMap[attr]) continue;
+                    if (attrMap[attr][0] === key) {
+                      if (attrMap[attr].length === 1) {
+                        allowed = true;
+                        break;
+                      } else if (typeof data[key] === 'object' && data[key] !== null) {
+                        allowed = true;
+                        break;
+                      }
+                    }
+                  }
+                }
+                if (!allowed) continue;
+                if (typeof data[key] === 'object' && data[key] !== null) {
+                  updateData[key] = {};
+                  for (const subkey in data[key]) {
+                    let subAllowed = allowAll;
+                    if (!allowAll) {
+                      for (const attr of modifyAttributes) {
+                        if (attrMap[attr] && attrMap[attr][0] === key && attrMap[attr][1] === subkey) {
+                          subAllowed = true;
+                          break;
+                        }
+                      }
+                    }
+                    if (!subAllowed) continue;
+                    updateData[key][subkey] = data[key][subkey];
+                  }
+                  if (Object.keys(updateData[key]).length === 0) delete updateData[key];
+                } else {
+                  updateData[key] = data[key];
+                }
+              }
+            } else {
+              // Only update changed fields
+              for (const key in data) {
+                let allowed = false;
+                if (allowAll) {
+                  allowed = true;
+                } else {
+                  for (const attr of modifyAttributes) {
+                    if (!attrMap[attr]) continue;
+                    if (attrMap[attr][0] === key) {
+                      if (attrMap[attr].length === 1) {
+                        allowed = true;
+                        break;
+                      } else if (typeof data[key] === 'object' && data[key] !== null) {
+                        allowed = true;
+                        break;
+                      }
+                    }
+                  }
+                }
+                if (!allowed) continue;
+                if (typeof data[key] === 'object' && data[key] !== null) {
+                  updateData[key] = {};
+                  for (const subkey in data[key]) {
+                    let subAllowed = allowAll;
+                    if (!allowAll) {
+                      for (const attr of modifyAttributes) {
+                        if (attrMap[attr] && attrMap[attr][0] === key && attrMap[attr][1] === subkey) {
+                          subAllowed = true;
+                          break;
+                        }
+                      }
+                    }
+                    if (!subAllowed) continue;
+                    if (JSON.stringify(data[key][subkey]) !== JSON.stringify(foundUsers[0][key]?.[subkey])) {
+                      updateData[key][subkey] = data[key][subkey];
+                    }
+                  }
+                  if (Object.keys(updateData[key]).length === 0) delete updateData[key];
+                } else {
+                  if (JSON.stringify(data[key]) !== JSON.stringify(foundUsers[0][key])) {
+                    updateData[key] = data[key];
+                  }
+                }
+              }
+            }
+            
+            // If no changes, skip update and log as skipped
+            if (Object.keys(updateData).length === 0) {
+              logStatus(`/import-users | ${user.username} | skipped`);
+              skippedCount++;
+            } else {
+              await updateUserWithRetry(userId, environmentId, accessToken, updateData);
+              logStatus(`/import-users | ${user.username} | modified`);
+              modifiedCount++;
+            }
+          }
+        } else {
+          // Handle import mode - try to create user
+          try {
+            await createUserWithRetry(user, environmentId, accessToken);
+            addedCount++;
+            logStatus(`/import-users | user_${i + 1}_added | ${user.username || user.email}`);
+          } catch (error) {
+            if (error.message.includes('already exists') || error.message.includes('duplicate')) {
+              // User already exists, skip
+              skippedCount++;
+              logStatus(`/import-users | user_${i + 1}_skipped | ${user.username || user.email}`);
+            } else {
+              throw error; // Re-throw other errors
+            }
+          }
+        }
         
         // Add small delay between requests to avoid rate limiting
         if (i < users.length - 1) {
-          await throttle(200); // 200ms delay between user creations
+          await throttle(200); // 200ms delay between operations
         }
       } catch (error) {
         errorCount++;
@@ -554,15 +919,11 @@ app.post('/delete-users', uploadRateLimiter, upload.single('csv'), validateInput
     }
     const accessToken = await authService.getWorkerToken(environmentId, clientId, clientSecret);
     const csvData = fs.readFileSync(filePath, 'utf8');
-    const results = Papa.parse(csvData, {
-      header: true,
-      skipEmptyLines: true,
-      error: (error) => { throw new Error(`CSV parsing error: ${error.message}`); }
-    });
-    if (results.errors.length > 0) {
-      throw new Error(`CSV parsing errors: ${results.errors.map(e => e.message).join(', ')}`);
+    const deleteResult = uDSV.parse(csvData, { header: true, skipEmptyLines: true });
+    if (deleteResult.errors.length > 0) {
+      throw new Error(`CSV parsing errors: ${deleteResult.errors.map(e => e.message).join(', ')}`);
     }
-    const users = results.data;
+    const users = deleteResult.data;
     if (users.length > config.validation.maxUsersPerImport) {
       throw new Error(`Too many users. Maximum allowed: ${config.validation.maxUsersPerImport}`);
     }
@@ -661,6 +1022,103 @@ async function findUserByUsername(username, environmentId, accessToken) {
   }
   
   return null;
+}
+
+// Helper function to find users by username (returns full user objects)
+async function findUsersByUsername(username, environmentId, accessToken) {
+  const url = `${config.pingone.apiUri}/v1/environments/${environmentId}/users`;
+  
+  const response = await axios.get(url, {
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json'
+    },
+    params: {
+      filter: `username eq "${username}"`
+    },
+    timeout: 30000
+  });
+  
+  if (response.data._embedded && response.data._embedded.users) {
+    return response.data._embedded.users;
+  }
+  
+  return [];
+}
+
+// Helper function to prepare user data for API calls
+function prepareUserData(user) {
+  const data = {
+    username: user.username,
+    email: user.email,
+    population: { id: user.populationId },
+    name: {
+      given: user.firstName,
+      family: user.lastName
+    }
+  };
+  
+  // Add optional fields
+  const optionalFields = config.validation.optionalFields;
+  optionalFields.forEach(field => {
+    if (user[field] && user[field].trim() !== '') {
+      if (field === 'active') {
+        data[field] = user[field] === 'true';
+      } else {
+        data[field] = user[field];
+      }
+    }
+  });
+  
+  // Handle phone numbers
+  const phoneNumbers = [];
+  if (user.primaryPhone) {
+    phoneNumbers.push({ type: 'primary', value: user.primaryPhone });
+  }
+  if (user.mobilePhone) {
+    phoneNumbers.push({ type: 'mobile', value: user.mobilePhone });
+  }
+  if (phoneNumbers.length > 0) {
+    data.phoneNumbers = phoneNumbers;
+  }
+  
+  // Handle address
+  if (user.streetAddress || user.countryCode || user.locality || user.region || user.postalCode) {
+    data.address = {};
+    if (user.streetAddress) data.address.streetAddress = user.streetAddress;
+    if (user.countryCode) data.address.country = user.countryCode;
+    if (user.locality) data.address.locality = user.locality;
+    if (user.region) data.address.region = user.region;
+    if (user.postalCode) data.address.postalCode = user.postalCode;
+  }
+  
+  return data;
+}
+
+// Helper function to update user with retry logic
+async function updateUserWithRetry(userId, environmentId, accessToken, updateData, retryCount = 0) {
+  const maxRetries = 3;
+  const baseDelay = 1000;
+  
+  try {
+    const url = `${config.pingone.apiUri}/v1/environments/${environmentId}/users/${userId}`;
+    
+    await axios.patch(url, updateData, {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      },
+      timeout: 30000
+    });
+  } catch (error) {
+    if (retryCount < maxRetries && (error.response?.status === 429 || error.response?.status >= 500)) {
+      const delay = baseDelay * Math.pow(2, retryCount);
+      console.log(`Update user retry ${retryCount + 1}/${maxRetries} after ${delay}ms`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+      return updateUserWithRetry(userId, environmentId, accessToken, updateData, retryCount + 1);
+    }
+    throw error;
+  }
 }
 
 // Helper function to delete user
