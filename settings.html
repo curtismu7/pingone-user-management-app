@@ -1118,6 +1118,44 @@
       color: #374151;
     }
   </style>
+</head>
+<body>
+  <div style="max-width: 1200px; margin: 0 auto; padding: 2rem;">
+    <h1 style="color: #e60028; margin-bottom: 2rem;">Settings</h1>
+    
+    <div style="background: white; border-radius: 12px; padding: 2rem; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+      <h2>🔐 PingOne Credentials</h2>
+      <p>Configure your PingOne environment credentials.</p>
+      
+      <form id="settingsCredentialsForm" style="margin-top: 1rem;">
+        <div style="margin-bottom: 1rem;">
+          <label for="settingsEnvironmentId">Environment ID *</label>
+          <input type="text" id="settingsEnvironmentId" name="environmentId" required style="width: 100%; padding: 0.75rem; border: 2px solid #e9ecef; border-radius: 6px;">
+        </div>
+        
+        <div style="margin-bottom: 1rem;">
+          <label for="settingsClientId">Client ID *</label>
+          <input type="text" id="settingsClientId" name="clientId" required style="width: 100%; padding: 0.75rem; border: 2px solid #e9ecef; border-radius: 6px;">
+        </div>
+        
+        <div style="margin-bottom: 1rem;">
+          <label for="settingsClientSecret">Client Secret *</label>
+          <input type="password" id="settingsClientSecret" name="clientSecret" required style="width: 100%; padding: 0.75rem; border: 2px solid #e9ecef; border-radius: 6px;">
+        </div>
+        
+        <div style="display: flex; gap: 1rem; margin-top: 1rem;">
+          <button type="submit" style="padding: 0.75rem 1.5rem; background: #e60028; color: white; border: none; border-radius: 6px; cursor: pointer;">Save Credentials</button>
+          <button type="button" onclick="testCredentials()" style="padding: 0.75rem 1.5rem; background: #28a745; color: white; border: none; border-radius: 6px; cursor: pointer;">Test Connection</button>
+          <button type="button" onclick="clearCredentials()" style="padding: 0.75rem 1.5rem; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer;">Clear</button>
+        </div>
+      </form>
+    </div>
+    
+    <div style="margin-top: 2rem; text-align: center;">
+      <a href="/" style="padding: 0.75rem 1.5rem; background: #e60028; color: white; text-decoration: none; border-radius: 6px; display: inline-block;">← Go back to main page</a>
+    </div>
+  </div>
+  
   <!-- Add tippy.js CDN -->
   <link rel="stylesheet" href="https://unpkg.com/tippy.js@6/dist/tippy.css" />
   <script src="https://unpkg.com/@popperjs/core@2"></script>
@@ -1125,901 +1163,123 @@
   <!-- Add PapaParse for CSV parsing -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.5.3/papaparse.min.js" async></script>
   
+  <script>
+    // Settings page functionality
+    document.addEventListener('DOMContentLoaded', function() {
+      // Load saved credentials
+      loadSavedCredentials();
+      
+      // Add form submit handler
+      const form = document.getElementById('settingsCredentialsForm');
+      if (form) {
+        form.addEventListener('submit', function(e) {
+          e.preventDefault();
+          saveCredentials();
+        });
+      }
+    });
+    
+    // Function to load saved credentials
+    function loadSavedCredentials() {
+      const environmentId = localStorage.getItem('pingone_environment_id');
+      const clientId = localStorage.getItem('pingone_client_id');
+      const clientSecret = localStorage.getItem('pingone_client_secret');
+      
+      if (environmentId) {
+        document.getElementById('settingsEnvironmentId').value = environmentId;
+      }
+      if (clientId) {
+        document.getElementById('settingsClientId').value = clientId;
+      }
+      if (clientSecret) {
+        document.getElementById('settingsClientSecret').value = clientSecret;
+      }
+    }
+    
+    // Function to save credentials
+    function saveCredentials() {
+      const environmentId = document.getElementById('settingsEnvironmentId').value;
+      const clientId = document.getElementById('settingsClientId').value;
+      const clientSecret = document.getElementById('settingsClientSecret').value;
+      
+      if (!environmentId || !clientId || !clientSecret) {
+        alert('Please fill in all required fields.');
+        return;
+      }
+      
+      // Save to localStorage
+      localStorage.setItem('pingone_environment_id', environmentId);
+      localStorage.setItem('pingone_client_id', clientId);
+      localStorage.setItem('pingone_client_secret', clientSecret);
+      
+      alert('Credentials saved successfully!');
+    }
+    
+    // Function to test credentials
+    function testCredentials() {
+      const environmentId = document.getElementById('settingsEnvironmentId').value;
+      const clientId = document.getElementById('settingsClientId').value;
+      const clientSecret = document.getElementById('settingsClientSecret').value;
+      
+      if (!environmentId || !clientId || !clientSecret) {
+        alert('Please fill in all required fields before testing.');
+        return;
+      }
+      
+      // Show loading state
+      const testButton = event.target;
+      const originalText = testButton.textContent;
+      testButton.textContent = 'Testing...';
+      testButton.disabled = true;
+      
+      // Test the credentials
+      fetch('/get-worker-token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          environmentId: environmentId,
+          clientId: clientId,
+          clientSecret: clientSecret
+        })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          alert('✅ Credentials are valid! Connection test successful.');
+        } else {
+          alert('❌ Credential test failed: ' + (data.error || 'Unknown error'));
+        }
+      })
+      .catch(error => {
+        console.error('Error testing credentials:', error);
+        alert('❌ Error testing credentials: ' + error.message);
+      })
+      .finally(() => {
+        // Restore button state
+        testButton.textContent = originalText;
+        testButton.disabled = false;
+      });
+    }
+    
+    // Function to clear credentials
+    function clearCredentials() {
+      if (confirm('Are you sure you want to clear all saved credentials?')) {
+        localStorage.removeItem('pingone_environment_id');
+        localStorage.removeItem('pingone_client_id');
+        localStorage.removeItem('pingone_client_secret');
+        
+        // Clear form fields
+        document.getElementById('settingsEnvironmentId').value = '';
+        document.getElementById('settingsClientId').value = '';
+        document.getElementById('settingsClientSecret').value = '';
+        
+        alert('Credentials cleared successfully!');
+      }
+    }
+  </script>
+  
   <!-- Library Loading Logger -->
-  <script>
-    // Library Loading Logger
-    window.libraryLogger = {
-      loadedLibraries: new Set(),
-      loadTimes: {},
-      errors: [],
-      
-      logLibraryLoad: function(libraryName, loadTime = Date.now(), source = 'unknown') {
-        const timestamp = new Date(loadTime).toISOString();
-        const loadDuration = this.loadTimes[libraryName] ? loadTime - this.loadTimes[libraryName] : 0;
-        
-        this.loadedLibraries.add(libraryName);
-        this.loadTimes[libraryName] = loadTime;
-        
-        const logMessage = `📚 Library Loaded: ${libraryName} | Time: ${timestamp} | Source: ${source} | Duration: ${loadDuration}ms`;
-        console.log(logMessage);
-        
-        // Also log to server if available
-        this.logToServer('library_loaded', {
-          library: libraryName,
-          timestamp: timestamp,
-          source: source,
-          duration: loadDuration,
-          page: window.location.pathname
-        });
-        
-        return logMessage;
-      },
-      
-      logLibraryError: function(libraryName, error, source = 'unknown') {
-        const timestamp = new Date().toISOString();
-        const errorInfo = {
-          library: libraryName,
-          error: error.message || error,
-          timestamp: timestamp,
-          source: source,
-          page: window.location.pathname
-        };
-        
-        this.errors.push(errorInfo);
-        
-        const logMessage = `❌ Library Error: ${libraryName} | Error: ${error.message || error} | Time: ${timestamp} | Source: ${source}`;
-        console.error(logMessage);
-        
-        // Log to server if available
-        this.logToServer('library_error', errorInfo);
-        
-        return logMessage;
-      },
-      
-      logToServer: function(eventType, data) {
-        // Try to send to server if available
-        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-          fetch('/log-library-event', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              event: eventType,
-              data: data,
-              userAgent: navigator.userAgent,
-              url: window.location.href
-            })
-          }).catch(err => {
-            // Silently fail if server is not available
-          });
-        }
-      },
-      
-      getLoadReport: function() {
-        return {
-          loadedLibraries: Array.from(this.loadedLibraries),
-          loadTimes: this.loadTimes,
-          errors: this.errors,
-          totalLibraries: this.loadedLibraries.size,
-          totalErrors: this.errors.length
-        };
-      },
-      
-      // Utility function to display library loading report
-      displayLoadReport: function() {
-        const report = this.getLoadReport();
-        console.group('📊 Library Loading Report');
-        console.log('📚 Loaded Libraries:', report.loadedLibraries);
-        console.log('⏱️ Load Times:', report.loadTimes);
-        console.log('❌ Errors:', report.errors);
-        console.log('📈 Summary:', {
-          totalLibraries: report.totalLibraries,
-          totalErrors: report.totalErrors,
-          successRate: report.totalLibraries > 0 ? ((report.totalLibraries - report.totalErrors) / report.totalLibraries * 100).toFixed(1) + '%' : 'N/A'
-        });
-        console.groupEnd();
-        return report;
-      }
-    };
-    
-    // Monitor script loading events
-    document.addEventListener('DOMContentLoaded', function() {
-      console.log('🔍 Library Loading Monitor initialized');
-      
-      // Check for already loaded libraries
-      setTimeout(() => {
-        // Check Papa Parse
-        if (typeof Papa !== 'undefined' && Papa.parse) {
-          window.libraryLogger.logLibraryLoad('PapaParse', Date.now(), 'head_script');
-        }
-        
-        // Check Tippy.js
-        if (typeof tippy !== 'undefined') {
-          window.libraryLogger.logLibraryLoad('Tippy.js', Date.now(), 'head_script');
-        }
-        
-        // Check Popper.js
-        if (typeof Popper !== 'undefined') {
-          window.libraryLogger.logLibraryLoad('Popper.js', Date.now(), 'head_script');
-        }
-      }, 100);
-    });
-
-    // Global function to display library report (for debugging)
-    window.showLibraryReport = function() {
-      if (window.libraryLogger) {
-        return window.libraryLogger.displayLoadReport();
-      } else {
-        console.error('Library logger not available');
-        return null;
-      }
-    };
-    
-    // Global function to get library report data
-    window.getLibraryReport = function() {
-      if (window.libraryLogger) {
-        return window.libraryLogger.getLoadReport();
-      } else {
-        console.error('Library logger not available');
-        return null;
-      }
-    };
-
-    // Function to count CSV rows and update status
-    async function countCSVRows(file) {
-      return new Promise((resolve, reject) => {
-        if (!file) {
-          resolve(0);
-          return;
-        }
-        
-        // Check if Papa Parse is available
-        if (typeof Papa === 'undefined') {
-          console.warn('Papa Parse library not loaded, cannot count CSV rows');
-          resolve(0); // Return 0 as fallback
-          return;
-        }
-        
-        Papa.parse(file, {
-          header: true, // Treat first row as header
-          skipEmptyLines: true,
-          complete: function(results) {
-            const rowCount = results.data.length;
-            resolve(rowCount);
-          },
-          error: function(error) {
-            console.error('Error parsing CSV for row count:', error);
-            reject(error);
-          }
-        });
-      });
-    }
-    
-    // Function to update status area with total records
-    function updateTotalRecordsDisplay(rowCount) {
-      const actionStatusText = document.getElementById('actionStatusText');
-      if (actionStatusText) {
-        actionStatusText.textContent = `Total Records: ${rowCount}`;
-      }
-      // Note: Settings page doesn't have actionStatusText, so this is a no-op on settings
-    }
-    
-    // Function to clear total records display
-    function clearTotalRecordsDisplay() {
-      const actionStatusText = document.getElementById('actionStatusText');
-      if (actionStatusText) {
-        actionStatusText.textContent = '';
-      }
-      // Note: Settings page doesn't have actionStatusText, so this is a no-op on settings
-    }
-    
-    // Function to fetch environment details from PingOne API
-    async function fetchEnvironmentDetails(environmentId, clientId, clientSecret) {
-      try {
-        const response = await fetch('/get-environment-details', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            environmentId: environmentId,
-            clientId: clientId,
-            clientSecret: clientSecret
-          })
-        });
-        
-        if (response.ok) {
-          const result = await response.json();
-          const environmentName = result.environment_name;
-          
-          // Store environment name in localStorage
-          localStorage.setItem('pingone_environment_name', environmentName);
-          
-          // Update the display
-          updateEnvironmentNameDisplay(environmentName);
-          
-          return environmentName;
-        } else {
-          // If environment details can't be fetched, fallback to showing just the Environment ID
-          console.warn('Failed to fetch environment details, falling back to Environment ID');
-          updateEnvironmentNameDisplay(null, environmentId);
-          return null;
-        }
-      } catch (error) {
-        console.error('Error fetching environment details:', error);
-        // Fallback to showing just the Environment ID
-        updateEnvironmentNameDisplay(null, environmentId);
-        return null;
-      }
-    }
-    
-    // Function to update environment name display
-    function updateEnvironmentNameDisplay(environmentName, fallbackEnvironmentId = null) {
-      const environmentNameElement = document.getElementById('settingsEnvironmentNameDisplay');
-      const environmentNameText = document.getElementById('settingsEnvironmentNameText');
-      
-      if (environmentNameElement && environmentNameText) {
-        if (environmentName) {
-          environmentNameText.innerHTML = `<strong>Environment Name:</strong> <span style="color:#0033a0;">${environmentName}</span>`;
-          environmentNameElement.style.display = 'block';
-        } else if (fallbackEnvironmentId) {
-          environmentNameText.innerHTML = `<strong>Environment ID:</strong> <span style="color:#0033a0;">${fallbackEnvironmentId}</span>`;
-          environmentNameElement.style.display = 'block';
-        } else {
-          environmentNameElement.style.display = 'none';
-        }
-      }
-    }
-
-    // Function to handle 429 (Too Many Requests) errors gracefully
-    function handle429Error(error, operation) {
-      console.error(`${operation} error (429):`, error);
-      
-      // Update worker token status to error
-      updateWorkerTokenError();
-      
-      // Show rate limit warning
-      showRateLimitWarning();
-      
-      // Create user-friendly error message
-      const errorMessage = `⚠️ Rate limit exceeded. The server is temporarily limiting requests to prevent overload. Please wait a moment and try again.`;
-      
-      // Show a user-friendly popup
-      if (typeof unifiedPopup !== 'undefined') {
-        unifiedPopup.alert(
-          `Rate limit exceeded. Please wait a moment and try again.\n\nThis usually happens when:\n• Processing large CSV files\n• Making multiple requests quickly\n• Server is under high load\n\nTry again in 30-60 seconds.`,
-          'Rate Limit Exceeded'
-        );
-      } else {
-        // Fallback to alert if unifiedPopup is not available
-        alert(`Rate limit exceeded. Please wait 30-60 seconds and try again.`);
-      }
-    }
-    
-    // Function to check if an error is a 429 error
-    function is429Error(error) {
-      return error.message && (
-        error.message.includes('429') || 
-        error.message.includes('Too Many Requests') ||
-        error.message.includes('rate limit')
-      );
-    }
-    
-    // Function to show rate limit warning
-    function showRateLimitWarning() {
-      const rateLimitWarning = document.getElementById('rateLimitWarning');
-      if (rateLimitWarning) {
-        rateLimitWarning.style.display = 'flex';
-        
-        // Auto-hide after 60 seconds
-        setTimeout(() => {
-          hideRateLimitWarning();
-        }, 60000);
-      }
-    }
-    
-    // Function to hide rate limit warning
-    function hideRateLimitWarning() {
-      const rateLimitWarning = document.getElementById('rateLimitWarning');
-      if (rateLimitWarning) {
-        rateLimitWarning.style.display = 'none';
-      }
-    }
-
-    // Function to create a custom file input that persists selection for settings
-    function createSettingsCustomFileInput() {
-      const settingsDefaultFile = document.getElementById('settingsDefaultFile');
-      if (!settingsDefaultFile) return;
-      
-      const fileInputContainer = settingsDefaultFile.parentElement;
-      
-      // Create custom file input wrapper
-      const customFileInput = document.createElement('div');
-      customFileInput.className = 'custom-file-input-settings';
-      customFileInput.style.cssText = `
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        margin-bottom: 10px;
-      `;
-      
-      // Create the actual file input (hidden)
-      const hiddenFileInput = document.createElement('input');
-      hiddenFileInput.type = 'file';
-      hiddenFileInput.accept = '.csv';
-      hiddenFileInput.id = 'settingsDefaultFile';
-      hiddenFileInput.name = 'defaultFile';
-      hiddenFileInput.style.display = 'none';
-      
-      // Create custom button
-      const customButton = document.createElement('button');
-      customButton.type = 'button';
-      customButton.className = 'button button-secondary';
-      customButton.textContent = 'Choose Default File';
-      customButton.style.cssText = `
-        white-space: nowrap;
-        min-width: 140px;
-      `;
-      
-      // Create file name display
-      const fileNameDisplay = document.createElement('span');
-      fileNameDisplay.id = 'settingsCustomFileNameDisplay';
-      fileNameDisplay.style.cssText = `
-        color: #6b7280;
-        font-style: italic;
-        flex: 1;
-      `;
-      fileNameDisplay.textContent = 'No default file set';
-      
-      // Create clear button
-      const clearButton = document.createElement('button');
-      clearButton.type = 'button';
-      clearButton.className = 'button button-light button-sm';
-      clearButton.textContent = 'Clear';
-      clearButton.style.display = 'none';
-      
-      // Add event listeners
-      customButton.addEventListener('click', () => {
-        hiddenFileInput.click();
-      });
-      
-      hiddenFileInput.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (file) {
-          fileNameDisplay.textContent = file.name;
-          fileNameDisplay.style.color = '#e60028';
-          fileNameDisplay.style.fontStyle = 'normal';
-          clearButton.style.display = 'inline-block';
-          
-          // Save to localStorage
-          localStorage.setItem('pingone_default_csv_file', file.name);
-          
-          // Update other displays
-          updateSettingsFileDisplays(file.name);
-          
-          // Count CSV rows
-          countCSVRows(file);
-        }
-      });
-      
-      clearButton.addEventListener('click', () => {
-        hiddenFileInput.value = '';
-        fileNameDisplay.textContent = 'No default file set';
-        fileNameDisplay.style.color = '#6b7280';
-        fileNameDisplay.style.fontStyle = 'italic';
-        clearButton.style.display = 'none';
-        
-        // Clear localStorage
-        localStorage.removeItem('pingone_default_csv_file');
-        
-        // Clear other displays
-        clearSettingsFileDisplays();
-      });
-      
-      // Assemble the custom input
-      customFileInput.appendChild(customButton);
-      customFileInput.appendChild(fileNameDisplay);
-      customFileInput.appendChild(clearButton);
-      
-      // Replace the original input
-      fileInputContainer.replaceChild(customFileInput, settingsDefaultFile);
-      fileInputContainer.appendChild(hiddenFileInput);
-      
-      // Restore saved file name
-      restoreSettingsSavedFileName();
-      
-      return hiddenFileInput;
-    }
-    
-    // Function to restore saved file name for settings
-    function restoreSettingsSavedFileName() {
-      const fileNameDisplay = document.getElementById('settingsCustomFileNameDisplay');
-      const clearButton = document.querySelector('.custom-file-input-settings .button-light');
-      
-      // Check for saved default file name
-      const savedFileName = localStorage.getItem('pingone_default_csv_file');
-      if (savedFileName && fileNameDisplay) {
-        fileNameDisplay.textContent = savedFileName;
-        fileNameDisplay.style.color = '#e60028';
-        fileNameDisplay.style.fontStyle = 'normal';
-        if (clearButton) {
-          clearButton.style.display = 'inline-block';
-        }
-        
-        // Update other displays
-        updateSettingsFileDisplays(savedFileName);
-      }
-    }
-    
-    // Function to update all file displays in settings
-    function updateSettingsFileDisplays(fileName) {
-      // Update settings page displays
-      const settingsSelectedFileNameDisplay = document.getElementById('settingsSelectedFileNameDisplay');
-      const settingsSelectedFileNameText = document.getElementById('settingsSelectedFileNameText');
-      const defaultFileName = document.getElementById('defaultFileName');
-      
-      if (settingsSelectedFileNameDisplay && settingsSelectedFileNameText) {
-        settingsSelectedFileNameText.innerHTML = `<strong>Default file:</strong> <span style="color:#e60028;">${fileName}</span>`;
-        settingsSelectedFileNameDisplay.style.display = 'block';
-      }
-      
-      if (defaultFileName) {
-        defaultFileName.textContent = fileName;
-      }
-    }
-    
-    // Function to clear all file displays in settings
-    function clearSettingsFileDisplays() {
-      const settingsSelectedFileNameDisplay = document.getElementById('settingsSelectedFileNameDisplay');
-      const defaultFileName = document.getElementById('defaultFileName');
-      
-      if (settingsSelectedFileNameDisplay) {
-        settingsSelectedFileNameDisplay.style.display = 'none';
-      }
-      
-      if (defaultFileName) {
-        defaultFileName.textContent = '';
-      }
-      
-      clearTotalRecordsDisplay();
-    }
-  </script>
-  
-  <!-- Modal Spinner Overlay -->
-  <div id="spinnerModal" style="
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.6);
-    z-index: 9999;
-    backdrop-filter: blur(2px);
-  ">
-    <div style="
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: white;
-      border-radius: 16px;
-      padding: 2.5rem;
-      text-align: center;
-      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-      max-width: 400px;
-      width: 90%;
-    ">
-      <div id="modalSpinner" style="
-        border: 6px solid #f3f4f6;
-        border-top: 6px solid #e60028;
-        border-radius: 50%;
-        width: 60px;
-        height: 60px;
-        animation: spin 1s linear infinite;
-        margin: 0 auto 1.5rem auto;
-      "></div>
-      
-      <!-- Worker Token Status Indicator -->
-      <div id="workerTokenStatus" style="
-        font-size: 0.9rem;
-        color: #16a34a;
-        font-weight: 500;
-        margin-bottom: 1rem;
-        padding: 0.5rem;
-        border-radius: 6px;
-        background: #f0fdf4;
-        border: 1px solid #bbf7d0;
-        display: none;
-      ">
-        <span id="workerTokenText">Getting Worker Token...</span>
-      </div>
-      
-      <div id="modalTitle" style="
-        font-size: 1.3rem;
-        font-weight: 600;
-        color: #22223b;
-        margin-bottom: 0.5rem;
-      ">Processing...</div>
-      <div id="modalSubtitle" style="
-        font-size: 1rem;
-        color: #6b7280;
-        margin-bottom: 1rem;
-      ">Please wait while we process your request</div>
-      <div id="modalProgress" style="
-        font-size: 0.95rem;
-        color: #0033a0;
-        font-weight: 500;
-      "></div>
-    </div>
-  </div>
-  
-  <!-- Credential Validation Error Modal -->
-  <div id="credentialErrorModal" style="
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.6);
-    z-index: 10000;
-    backdrop-filter: blur(2px);
-  ">
-    <div style="
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: white;
-      border-radius: 16px;
-      padding: 0;
-      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-      max-width: 600px;
-      width: 90%;
-      max-height: 90vh;
-      overflow-y: auto;
-    ">
-      <!-- Header -->
-      <div style="
-        background: #dc2626;
-        color: white;
-        padding: 1.5rem 2rem 1rem 2rem;
-        border-radius: 16px 16px 0 0;
-        position: relative;
-      ">
-        <button id="closeCredentialErrorModal" style="
-          position: absolute;
-          top: 1rem;
-          right: 1.5rem;
-          background: none;
-          border: none;
-          color: white;
-          font-size: 1.5rem;
-          cursor: pointer;
-          padding: 0;
-          width: 30px;
-          height: 30px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          border-radius: 50%;
-          transition: background-color 0.2s;
-        " onmouseover="this.style.backgroundColor='rgba(255,255,255,0.2)'" onmouseout="this.style.backgroundColor='transparent'">✖</button>
-        <div style="
-          display: flex;
-          align-items: center;
-          margin-bottom: 0.5rem;
-        ">
-          <div style="
-            width: 48px;
-            height: 48px;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.2);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-right: 1rem;
-          ">
-            <span style="font-size: 24px;">🔐</span>
-          </div>
-          <h2 style="
-            margin: 0;
-            color: white;
-            font-size: 1.5rem;
-            font-weight: 600;
-          ">Credential Validation Failed</h2>
-        </div>
-      </div>
-      
-      <!-- Body -->
-      <div style="padding: 2rem;">
-        <!-- Error Message -->
-        <div style="
-          background: #fef2f2;
-          border: 1px solid #fecaca;
-          border-radius: 8px;
-          padding: 1rem;
-          margin-bottom: 1.5rem;
-        ">
-          <div style="
-            color: #dc2626;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-            font-size: 1rem;
-          ">We were unable to verify your credentials with PingOne.</div>
-          <div id="credentialErrorDetails" style="
-            color: #7f1d1d;
-            font-size: 0.9rem;
-            font-family: 'Courier New', monospace;
-            background: #fef2f2;
-            padding: 0.5rem;
-            border-radius: 4px;
-            border-left: 3px solid #dc2626;
-            margin-top: 0.5rem;
-          "></div>
-        </div>
-        
-        <!-- More Info Section -->
-        <div style="margin-bottom: 1.5rem;">
-          <button id="toggleTroubleshooting" style="
-            background: #0033a0;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            padding: 0.75rem 1.5rem;
-            font-size: 0.95rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: background-color 0.2s;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-          " onmouseover="this.style.background='#002266'" onmouseout="this.style.background='#0033a0'">
-            <span id="troubleshootingIcon">▶</span>
-            More Info
-          </button>
-          
-          <div id="troubleshootingContent" style="
-            display: none;
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 1.5rem;
-            margin-top: 1rem;
-          ">
-            <h3 style="
-              margin: 0 0 1rem 0;
-              color: #1e293b;
-              font-size: 1.1rem;
-              font-weight: 600;
-            ">Troubleshooting Steps:</h3>
-            <ul style="
-              margin: 0;
-              padding-left: 1.5rem;
-              color: #475569;
-              line-height: 1.6;
-            ">
-              <li style="margin-bottom: 0.5rem;">Check that the <strong>Environment ID</strong>, <strong>Client ID</strong>, and <strong>Client Secret</strong> are correct.</li>
-              <li style="margin-bottom: 0.5rem;">Ensure your Worker App has the <strong>client_credentials</strong> grant type enabled.</li>
-              <li style="margin-bottom: 0.5rem;">Make sure the credentials belong to a <strong>Worker App</strong>, not a regular app.</li>
-              <li style="margin-bottom: 0.5rem;">Verify that the environment ID matches the region (e.g., US, EU).</li>
-              <li style="margin-bottom: 0.5rem;">You may also need to check API permissions/scopes in PingOne.</li>
-            </ul>
-          </div>
-        </div>
-        
-        <!-- OK Button -->
-        <div style="text-align: center;">
-          <button id="dismissCredentialError" style="
-            background: #dc2626;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            padding: 0.75rem 2rem;
-            font-size: 1rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: background-color 0.2s;
-          " onmouseover="this.style.background='#b91c1c'" onmouseout="this.style.background='#dc2626'">
-            OK
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-  
-  <script>
-    // Function to show credential error details modal
-    function showCredentialErrorDetails() {
-      if (window.lastCredentialError) {
-        showCredentialErrorModal(window.lastCredentialError.message, window.lastCredentialError.details);
-      } else {
-        showCredentialErrorModal('Credential validation failed', 'No detailed error information available.');
-      }
-    }
-    
-    // Credential Error Modal Functions
-    function showCredentialErrorModal(errorMessage = '', errorDetails = '') {
-      const modal = document.getElementById('credentialErrorModal');
-      const errorDetailsElement = document.getElementById('credentialErrorDetails');
-      
-      if (modal) {
-        // Set error details if provided
-        if (errorDetailsElement) {
-          if (errorDetails) {
-            errorDetailsElement.textContent = errorDetails;
-            errorDetailsElement.style.display = 'block';
-          } else {
-            errorDetailsElement.style.display = 'none';
-          }
-        }
-        
-        modal.style.display = 'block';
-      }
-    }
-    
-    function hideCredentialErrorModal() {
-      const modal = document.getElementById('credentialErrorModal');
-      if (modal) {
-        modal.style.display = 'none';
-      }
-    }
-    
-    function toggleTroubleshooting() {
-      const content = document.getElementById('troubleshootingContent');
-      const icon = document.getElementById('troubleshootingIcon');
-      
-      if (content && icon) {
-        if (content.style.display === 'none' || !content.style.display) {
-          content.style.display = 'block';
-          icon.textContent = '▼';
-        } else {
-          content.style.display = 'none';
-          icon.textContent = '▶';
-        }
-      }
-    }
-    
-    // Add event listeners for modal
-    document.addEventListener('DOMContentLoaded', function() {
-      // Close button
-      const closeBtn = document.getElementById('closeCredentialErrorModal');
-      if (closeBtn) {
-        closeBtn.addEventListener('click', hideCredentialErrorModal);
-      }
-      
-      // OK button
-      const okBtn = document.getElementById('dismissCredentialError');
-      if (okBtn) {
-        okBtn.addEventListener('click', hideCredentialErrorModal);
-      }
-      
-      // More Info button
-      const moreInfoBtn = document.getElementById('toggleTroubleshooting');
-      if (moreInfoBtn) {
-        moreInfoBtn.addEventListener('click', toggleTroubleshooting);
-      }
-      
-      // Close modal when clicking outside
-      const modal = document.getElementById('credentialErrorModal');
-      if (modal) {
-        modal.addEventListener('click', function(event) {
-          if (event.target === modal) {
-            hideCredentialErrorModal();
-          }
-        });
-      }
-    });
-  </script>
-
-  <!-- Unified Popup System -->
-  <div id="unifiedPopup" style="
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.6);
-    z-index: 10000;
-    backdrop-filter: blur(2px);
-  ">
-    <div style="
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: #f8f9fa;
-      border: 1px solid #000;
-      border-radius: 12px;
-      padding: 0;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-      max-width: 500px;
-      width: 90%;
-      max-height: 90vh;
-      overflow-y: auto;
-    ">
-      <!-- Header -->
-      <div style="
-        background: #e9ecef;
-        color: #212529;
-        padding: 1.5rem 2rem 1rem 2rem;
-        border-radius: 12px 12px 0 0;
-        position: relative;
-        border-bottom: 1px solid #000;
-      ">
-        <button id="closeUnifiedPopup" style="
-          position: absolute;
-          top: 1rem;
-          right: 1.5rem;
-          background: none;
-          border: none;
-          color: #212529;
-          font-size: 1.5rem;
-          cursor: pointer;
-          padding: 0;
-          width: 30px;
-          height: 30px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          border-radius: 50%;
-          transition: background-color 0.2s;
-        " onmouseover="this.style.backgroundColor='rgba(0,0,0,0.1)'" onmouseout="this.style.backgroundColor='transparent'">✖</button>
-        <h2 id="popupTitle" style="
-          margin: 0;
-          color: #212529;
-          font-size: 1.5rem;
-          font-weight: 600;
-        ">Popup Title</h2>
-      </div>
-      
-      <!-- Body -->
-      <div style="padding: 2rem;">
-        <div id="popupContent" style="
-          color: #212529;
-          line-height: 1.6;
-          margin-bottom: 1.5rem;
-        ">
-          <!-- Content will be populated dynamically -->
-        </div>
-        
-        <!-- Buttons -->
-        <div id="popupButtons" style="
-          display: flex;
-          gap: 1rem;
-          justify-content: flex-end;
-        ">
-          <!-- Buttons will be populated dynamically -->
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Clear Settings Modal -->
-  <script>
-    // ... existing code ...
-    // Initialize tippy.js on all elements with data-tippy-content
-    document.addEventListener('DOMContentLoaded', function() {
-      tippy('[data-tippy-content]', {
-        theme: 'pingone',
-        placement: 'top',
-        arrow: true,
-        animation: 'shift-away',
-        duration: [200, 150],
-        delay: [0, 0],
-        interactive: false,
-        allowHTML: true,
-        maxWidth: 260,
-        offset: [0, 8],
-        // Keep tooltip on hover/tap, no timeout
-        trigger: 'mouseenter focus',
-        touch: ['hold', 500],
-      });
-    });
-    // ... existing code ...
-  </script>
 </body>
 </html> 
