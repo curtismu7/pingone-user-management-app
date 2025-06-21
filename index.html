@@ -11,9 +11,8 @@
   <link rel="stylesheet" href="https://unpkg.com/tippy.js@6/dist/tippy.css" />
   <script src="https://unpkg.com/@popperjs/core@2"></script>
   <script src="https://unpkg.com/tippy.js@6"></script>
-  <!-- Add PapaParse for CSV parsing -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.5.3/papaparse.min.js" async onerror="console.error('❌ Failed to load Papa Parse from CDN')"></script>
-  
+  <!-- Add PapaParse for CSV parsing (local) -->
+  <script src="assets/papaparse.min.js"></script>
   <!-- Library Loading Logger -->
   <script>
     // Library Loading Logger
@@ -3728,60 +3727,11 @@
     // Function to ensure Papa Parse is loaded
     function ensurePapaParseLoaded() {
       return new Promise((resolve, reject) => {
-        // Check if Papa Parse is already loaded
         if (typeof Papa !== 'undefined' && Papa.parse) {
-          console.log('✅ Papa Parse is already loaded');
           resolve();
-          return;
+        } else {
+          reject(new Error('Papa Parse library failed to load'));
         }
-        
-        // Wait for Papa Parse to load
-        let attempts = 0;
-        const maxAttempts = 100; // 10 seconds max wait
-        
-        const checkPapaParse = () => {
-          attempts++;
-          
-          if (typeof Papa !== 'undefined' && Papa.parse) {
-            console.log('✅ Papa Parse loaded after waiting');
-            resolve();
-            return;
-          }
-          
-          if (attempts >= maxAttempts) {
-            console.error('❌ Papa Parse failed to load after 10 seconds, trying fallback...');
-            // Try to load from fallback CDN
-            loadPapaParseFallback().then(resolve).catch(reject);
-            return;
-          }
-          
-          setTimeout(checkPapaParse, 100);
-        };
-        
-        checkPapaParse();
-      });
-    }
-    
-    // Function to load Papa Parse from fallback CDN
-    function loadPapaParseFallback() {
-      return new Promise((resolve, reject) => {
-        console.log('🔄 Attempting to load Papa Parse from fallback CDN...');
-        
-        const script = document.createElement('script');
-        script.src = 'https://unpkg.com/papaparse@5.5.3/papaparse.min.js';
-        script.async = true;
-        
-        script.onload = () => {
-          console.log('✅ Papa Parse loaded from fallback CDN');
-          resolve();
-        };
-        
-        script.onerror = () => {
-          console.error('❌ Papa Parse failed to load from fallback CDN');
-          reject(new Error('Papa Parse library failed to load from all sources'));
-        };
-        
-        document.head.appendChild(script);
       });
     }
     
@@ -4052,57 +4002,7 @@
       }
       return false;
     }
-    
-    // Function to manually retry Papa Parse loading
-    async function retryPapaParseLoading() {
-      console.log('🔄 Manually retrying Papa Parse loading...');
-      
-      const statusBox = document.getElementById('statusBox');
-      if (statusBox) {
-        statusBox.innerHTML = `
-          <div class="alert alert-info">
-            <strong>Loading Papa Parse...</strong><br>
-            Attempting to load the CSV parsing library...<br>
-            <small>Please wait...</small>
-          </div>
-        `;
-      }
-      
-      try {
-        await ensurePapaParseLoaded();
-        console.log('✅ Papa Parse loaded successfully on manual retry');
-        
-        // Clear the status
-        if (statusBox) {
-          statusBox.innerHTML = '';
-        }
-        
-        // Re-count rows if a file is selected
-        const file = getSelectedFile();
-        if (file) {
-          const rowCount = await countCSVRows(file);
-          updateTotalRecordsDisplay(rowCount);
-        }
-        
-        return true;
-      } catch (error) {
-        console.error('❌ Manual Papa Parse retry failed:', error);
-        
-        if (statusBox) {
-          statusBox.innerHTML = `
-            <div class="alert alert-danger">
-              <strong>Library Loading Failed</strong><br>
-              Papa Parse library failed to load: ${error.message}<br>
-              <button onclick="retryPapaParseLoading()" class="button button-sm button-secondary">Retry Loading</button>
-              <small>If the issue persists, please check your internet connection and refresh the page.</small>
-            </div>
-          `;
-        }
-        
-        return false;
-      }
-    }
-    
+
     // Initialize everything when DOM is loaded
     document.addEventListener('DOMContentLoaded', async function() {
       console.log('🚀 Initializing PingOne User Management Application...');
