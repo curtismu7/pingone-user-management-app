@@ -185,6 +185,7 @@ const securityHeaders = helmet({
         "https://unpkg.com", 
         "https://cdnjs.cloudflare.com"
       ],
+      scriptSrcAttr: ["'unsafe-inline'"],
       fontSrc: [
         "'self'", 
         "https://fonts.gstatic.com",
