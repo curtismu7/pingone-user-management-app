@@ -176,7 +176,8 @@ const securityHeaders = helmet({
         "https://fonts.googleapis.com", 
         "https://assets.pingone.com",
         "https://unpkg.com",
-        "https://use.typekit.net"
+        "https://use.typekit.net",
+        "https://p.typekit.net"
       ],
       scriptSrc: [
         "'self'", 
@@ -188,6 +189,8 @@ const securityHeaders = helmet({
         "'self'", 
         "https://fonts.gstatic.com",
         "https://assets.pingone.com",
+        "https://use.typekit.net",
+        "https://p.typekit.net",
         "data:"
       ],
       imgSrc: ["'self'", "data:", "https:"],
