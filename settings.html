@@ -978,6 +978,12 @@
         opacity: 1;
       }
     }
+    
+    /* Spinner animation */
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
   </style>
 </head>
 <body style="display:flex;flex-direction:row;min-height:100vh;">
@@ -2977,11 +2983,14 @@
         }
       } catch (error) {
         window.credentialsValidated = false;
-        statusSpan.textContent = '❌ Invalid credentials. Please check Environment ID, Client ID, and Client Secret.';
+        statusSpan.textContent = '❌ Invalid credentials. Please check your Environment ID, Client ID, and Client Secret';
         statusSpan.style.color = '#dc2626';
         testBtn.textContent = 'Test Credentials';
         testBtn.disabled = false;
         console.error('Credential test error:', error);
+        
+        // Hide spinner
+        hideSpinnerModal();
       }
     }
     
@@ -3112,9 +3121,122 @@
 
     // Initialize tooltip system
     let tooltipManager;
-    document.addEventListener('DOMContentLoaded', () => {
+    
+    // Modal Spinner Control Functions
+    function showSpinnerModal(action, totalItems = 0) {
+      const modal = document.getElementById('spinnerModal');
+      const title = document.getElementById('modalTitle');
+      const subtitle = document.getElementById('modalSubtitle');
+      const progress = document.getElementById('modalProgress');
+      
+      // Set action-specific text
+      switch(action) {
+        case 'Import':
+          title.textContent = 'Importing Users...';
+          subtitle.textContent = 'Please wait while we import users from your CSV file';
+          break;
+        case 'Delete':
+          title.textContent = 'Deleting Users...';
+          subtitle.textContent = 'Please wait while we delete users from your PingOne environment';
+          break;
+        case 'Modify':
+          title.textContent = 'Modifying Users...';
+          subtitle.textContent = 'Please wait while we update user attributes';
+          break;
+        default:
+          title.textContent = 'Processing...';
+          subtitle.textContent = 'Please wait while we process your request';
+      }
+      
+      if (totalItems > 0) {
+        progress.textContent = `Processing 0 of ${totalItems} items...`;
+      } else {
+        progress.textContent = '';
+      }
+      
+      modal.style.display = 'block';
+    }
+    
+    function updateSpinnerProgress(completed, total, batchCounter = 0, summary = false, isComplete = false) {
+      const progress = document.getElementById('modalProgress');
+      if (progress && total > 0) {
+        if (isComplete) {
+          progress.textContent = 'Processing complete';
+        } else {
+          // Show batch counter if provided, otherwise use the completed count
+          const displayCount = batchCounter > 0 ? batchCounter * 5 : Math.min(completed * 5, total);
+          
+          if (summary) {
+            progress.textContent = `📊 Summary: ${displayCount} of ${total} completed so far...`;
+          } else {
+            progress.textContent = `${displayCount} of ${total} completed...`;
+          }
+        }
+      }
+    }
+    
+    function hideSpinnerModal() {
+      const modal = document.getElementById('spinnerModal');
+      modal.style.display = 'none';
+    }
+    
+    // Initialize tooltip system when DOM is loaded
+    document.addEventListener('DOMContentLoaded', function() {
       tooltipManager = new TooltipManager();
     });
   </script>
+  
+  <!-- Modal Spinner Overlay -->
+  <div id="spinnerModal" style="
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 9999;
+    backdrop-filter: blur(2px);
+  ">
+    <div style="
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      border-radius: 16px;
+      padding: 2.5rem;
+      text-align: center;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+      max-width: 400px;
+      width: 90%;
+    ">
+      <div id="modalSpinner" style="
+        border: 6px solid #f3f4f6;
+        border-top: 6px solid #e60028;
+        border-radius: 50%;
+        width: 60px;
+        height: 60px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 1.5rem auto;
+      "></div>
+      <div id="modalTitle" style="
+        font-size: 1.3rem;
+        font-weight: 600;
+        color: #22223b;
+        margin-bottom: 0.5rem;
+      ">Processing...</div>
+      <div id="modalSubtitle" style="
+        font-size: 1rem;
+        color: #6b7280;
+        margin-bottom: 1rem;
+      ">Please wait while we process your request</div>
+      <div id="modalProgress" style="
+        font-size: 0.95rem;
+        color: #0033a0;
+        font-weight: 500;
+      "></div>
+    </div>
+  </div>
 </body>
 </html> 
