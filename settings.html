@@ -764,7 +764,35 @@
       gap: 0.5em;
       margin-top: 0.5em;
       cursor: pointer;
+      width: 100%;
+      max-width: 350px;
     }
+    
+    .file-input-container input[type="file"] {
+      height: 2.5rem;
+      font-size: 1rem;
+      padding: 0.5rem 0.8rem;
+      border-radius: 6px;
+      border: 1px solid #cbd5e1;
+      background: #f3f4f6;
+      box-sizing: border-box;
+      width: 100%;
+      color: #e60028;
+      cursor: pointer;
+      transition: border-color 0.2s, background-color 0.2s;
+    }
+    
+    .file-input-container input[type="file"]:hover {
+      border-color: #e60028;
+      background: #f8fafc;
+    }
+    
+    .file-input-container input[type="file"]:focus {
+      outline: none;
+      border-color: #e60028;
+      box-shadow: 0 0 0 2px rgba(230, 0, 40, 0.1);
+    }
+    
     .custom-checkbox-label {
       font-size: 1.1em;
       user-select: none;
@@ -1166,7 +1194,7 @@
               </div>
               <div style="display:flex;align-items:center;gap:1rem;width:100%;">
                 <div class="file-input-container">
-                  <input type="file" id="settingsDefaultFile" accept=".csv" class="enhanced-input" style="color:#e60028;flex:1;padding:0.7rem 0.9rem;border-radius:7px;border:1.5px solid #cbd5e1;background:#f8fafc;font-size:1.13rem;" data-tooltip="Select a default CSV file that will be automatically loaded on the main page" />
+                  <input type="file" id="settingsDefaultFile" accept=".csv" class="enhanced-input" data-tooltip="Select a default CSV file that will be automatically loaded on the main page" />
                   <div class="settings-file-checkbox-row">
                     <input type="checkbox" id="saveFileNameCheckbox" class="unified-checkbox enhanced-input" data-tooltip="Save the selected file name to browser storage for future sessions" />
                     <label for="saveFileNameCheckbox" class="settings-file-checkbox-label">
