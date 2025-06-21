@@ -2180,14 +2180,15 @@
         return;
       }
       
-      if (!csvFileInput.files || csvFileInput.files.length === 0) {
-        unifiedPopup.alert('Please select a CSV file first.', 'No File Selected');
+      // Check if file input exists and has files
+      if (!csvFileInput) {
+        console.error('CSV file input element not found');
+        unifiedPopup.alert('CSV file input not found. Please refresh the page.', 'System Error');
         return;
       }
       
-      const file = csvFileInput.files[0];
-      if (!file.name.toLowerCase().endsWith('.csv')) {
-        unifiedPopup.alert('Please select a valid CSV file.', 'Invalid File Type');
+      if (!csvFileInput.files || csvFileInput.files.length === 0) {
+        unifiedPopup.alert('Please select a CSV file first.', 'No File Selected');
         return;
       }
       
@@ -2200,7 +2201,7 @@
       const clientSecret = localStorage.getItem('pingone_client_secret');
       
       const formData = new FormData();
-      formData.append('csv', file);
+      formData.append('csv', csvFileInput.files[0]);
       formData.append('environmentId', environmentId);
       formData.append('clientId', clientId);
       formData.append('clientSecret', clientSecret);
@@ -2347,6 +2348,13 @@
         return;
       }
       
+      // Check if file input exists and has files
+      if (!csvFileInput) {
+        console.error('CSV file input element not found');
+        unifiedPopup.alert('CSV file input not found. Please refresh the page.', 'System Error');
+        return;
+      }
+      
       if (!csvFileInput.files || csvFileInput.files.length === 0) {
         unifiedPopup.alert('Please select a CSV file first.', 'No File Selected');
         return;
@@ -2367,7 +2375,7 @@
       const clientSecret = localStorage.getItem('pingone_client_secret');
       
       const formData = new FormData();
-      formData.append('csv', file);
+      formData.append('csv', csvFileInput.files[0]);
       formData.append('environmentId', environmentId);
       formData.append('clientId', clientId);
       formData.append('clientSecret', clientSecret);
@@ -3494,6 +3502,13 @@
         return;
       }
       
+      // Check if file input exists and has files
+      if (!csvFileInput) {
+        console.error('CSV file input element not found');
+        unifiedPopup.alert('CSV file input not found. Please refresh the page.', 'System Error');
+        return;
+      }
+      
       if (!csvFileInput.files || csvFileInput.files.length === 0) {
         unifiedPopup.alert('Please select a CSV file first.', 'No File Selected');
         return;
@@ -3710,29 +3725,74 @@
       }
     }
     
+    // Function to ensure Papa Parse is loaded
+    function ensurePapaParseLoaded() {
+      return new Promise((resolve, reject) => {
+        // Check if Papa Parse is already loaded
+        if (typeof Papa !== 'undefined' && Papa.parse) {
+          console.log('✅ Papa Parse is already loaded');
+          resolve();
+          return;
+        }
+        
+        // Wait for Papa Parse to load
+        let attempts = 0;
+        const maxAttempts = 50; // 5 seconds max wait
+        
+        const checkPapaParse = () => {
+          attempts++;
+          
+          if (typeof Papa !== 'undefined' && Papa.parse) {
+            console.log('✅ Papa Parse loaded after waiting');
+            resolve();
+            return;
+          }
+          
+          if (attempts >= maxAttempts) {
+            console.error('❌ Papa Parse failed to load after 5 seconds');
+            reject(new Error('Papa Parse library failed to load'));
+            return;
+          }
+          
+          setTimeout(checkPapaParse, 100);
+        };
+        
+        checkPapaParse();
+      });
+    }
+    
     // Function to count CSV rows and update status
     async function countCSVRows(file) {
-      return new Promise((resolve, reject) => {
+      return new Promise(async (resolve, reject) => {
         if (!file) {
           globalCSVRowCount = 0;
           resolve(0);
           return;
         }
         
-        Papa.parse(file, {
-          header: true, // Treat first row as header
-          skipEmptyLines: true,
-          complete: function(results) {
-            const rowCount = results.data.length;
-            globalCSVRowCount = rowCount; // Store globally
-            resolve(rowCount);
-          },
-          error: function(error) {
-            console.error('Error parsing CSV for row count:', error);
-            globalCSVRowCount = 0;
-            reject(error);
-          }
-        });
+        try {
+          // Ensure Papa Parse is loaded
+          await ensurePapaParseLoaded();
+          
+          Papa.parse(file, {
+            header: true, // Treat first row as header
+            skipEmptyLines: true,
+            complete: function(results) {
+              const rowCount = results.data.length;
+              globalCSVRowCount = rowCount; // Store globally
+              resolve(rowCount);
+            },
+            error: function(error) {
+              console.error('Error parsing CSV for row count:', error);
+              globalCSVRowCount = 0;
+              reject(error);
+            }
+          });
+        } catch (error) {
+          console.error('Failed to load Papa Parse:', error);
+          globalCSVRowCount = 0;
+          reject(error);
+        }
       });
     }
     
@@ -3968,6 +4028,48 @@
       }
       return false;
     }
+    
+    // Initialize everything when DOM is loaded
+    document.addEventListener('DOMContentLoaded', async function() {
+      console.log('🚀 Initializing PingOne User Management Application...');
+      
+      try {
+        // Ensure Papa Parse is loaded
+        await ensurePapaParseLoaded();
+        console.log('✅ Papa Parse initialization complete');
+        
+        // Initialize file input handling
+        const csvFileInput = document.getElementById('csvFile');
+        if (csvFileInput) {
+          console.log('✅ CSV file input found and initialized');
+          
+          // Add event listener for file selection
+          csvFileInput.addEventListener('change', async function(e) {
+            const file = e.target.files[0];
+            if (file) {
+              console.log(`📁 File selected: ${file.name}`);
+              try {
+                const rowCount = await countCSVRows(file);
+                console.log(`📊 CSV row count: ${rowCount}`);
+                updateTotalRecordsDisplay(rowCount);
+              } catch (error) {
+                console.error('❌ Error counting CSV rows:', error);
+                clearTotalRecordsDisplay();
+              }
+            }
+          });
+        } else {
+          console.warn('⚠️ CSV file input not found');
+        }
+        
+        // Check for saved file name and show reselection message if needed
+        showFileReselectionMessage();
+        
+        console.log('✅ Application initialization complete');
+      } catch (error) {
+        console.error('❌ Application initialization failed:', error);
+      }
+    });
   </script>
 </body>
 </html>
