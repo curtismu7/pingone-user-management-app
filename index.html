@@ -2353,6 +2353,9 @@
       // Initialize credential status
       validateCredentials();
       
+      // Initialize custom file input for persistence
+      createCustomFileInput();
+      
       // Setup clear file button functionality
       const clearFileBtn = document.getElementById('clearFileBtn');
       if (clearFileBtn) {
@@ -3577,6 +3580,210 @@
       if (actionStatusText) {
         actionStatusText.textContent = '';
       }
+    }
+
+    // Function to create a custom file input that persists selection
+    function createCustomFileInput() {
+      const csvFileInput = document.getElementById('csvFileInput');
+      const fileInputContainer = csvFileInput.parentElement;
+      
+      // Create custom file input wrapper
+      const customFileInput = document.createElement('div');
+      customFileInput.className = 'custom-file-input';
+      customFileInput.style.cssText = `
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
+      `;
+      
+      // Create the actual file input (hidden)
+      const hiddenFileInput = document.createElement('input');
+      hiddenFileInput.type = 'file';
+      hiddenFileInput.accept = '.csv';
+      hiddenFileInput.id = 'csvFileInput';
+      hiddenFileInput.name = 'csvFile';
+      hiddenFileInput.style.display = 'none';
+      
+      // Create custom button
+      const customButton = document.createElement('button');
+      customButton.type = 'button';
+      customButton.className = 'button button-secondary';
+      customButton.textContent = 'Choose File';
+      customButton.style.cssText = `
+        white-space: nowrap;
+        min-width: 120px;
+      `;
+      
+      // Create file name display
+      const fileNameDisplay = document.createElement('span');
+      fileNameDisplay.id = 'customFileNameDisplay';
+      fileNameDisplay.style.cssText = `
+        color: #6b7280;
+        font-style: italic;
+        flex: 1;
+      `;
+      fileNameDisplay.textContent = 'No file chosen';
+      
+      // Create clear button
+      const clearButton = document.createElement('button');
+      clearButton.type = 'button';
+      clearButton.className = 'button button-light button-sm';
+      clearButton.textContent = 'Clear';
+      clearButton.style.display = 'none';
+      
+      // Add event listeners
+      customButton.addEventListener('click', () => {
+        hiddenFileInput.click();
+      });
+      
+      hiddenFileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          fileNameDisplay.textContent = file.name;
+          fileNameDisplay.style.color = '#e60028';
+          fileNameDisplay.style.fontStyle = 'normal';
+          clearButton.style.display = 'inline-block';
+          
+          // Save to localStorage
+          localStorage.setItem('lastSelectedFileName', file.name);
+          
+          // Update other displays
+          updateFileDisplays(file.name);
+          
+          // Count CSV rows
+          countCSVRows(file);
+        }
+      });
+      
+      clearButton.addEventListener('click', () => {
+        hiddenFileInput.value = '';
+        fileNameDisplay.textContent = 'No file chosen';
+        fileNameDisplay.style.color = '#6b7280';
+        fileNameDisplay.style.fontStyle = 'italic';
+        clearButton.style.display = 'none';
+        
+        // Clear localStorage
+        localStorage.removeItem('lastSelectedFileName');
+        
+        // Clear other displays
+        clearFileDisplays();
+      });
+      
+      // Assemble the custom input
+      customFileInput.appendChild(customButton);
+      customFileInput.appendChild(fileNameDisplay);
+      customFileInput.appendChild(clearButton);
+      
+      // Replace the original input
+      fileInputContainer.replaceChild(customFileInput, csvFileInput);
+      fileInputContainer.appendChild(hiddenFileInput);
+      
+      // Restore saved file name
+      restoreSavedFileName();
+      
+      return hiddenFileInput;
+    }
+    
+    // Function to restore saved file name
+    function restoreSavedFileName() {
+      const fileNameDisplay = document.getElementById('customFileNameDisplay');
+      const clearButton = document.querySelector('.custom-file-input .button-light');
+      
+      // Check for saved file name
+      const savedFileName = localStorage.getItem('lastSelectedFileName');
+      if (savedFileName && fileNameDisplay) {
+        fileNameDisplay.textContent = savedFileName;
+        fileNameDisplay.style.color = '#e60028';
+        fileNameDisplay.style.fontStyle = 'normal';
+        if (clearButton) {
+          clearButton.style.display = 'inline-block';
+        }
+        
+        // Update other displays
+        updateFileDisplays(savedFileName);
+      }
+    }
+    
+    // Function to update all file displays
+    function updateFileDisplays(fileName) {
+      // Update main page displays
+      const selectedFileNameDisplay = document.getElementById('selectedFileNameDisplay');
+      const selectedFileNameText = document.getElementById('selectedFileNameText');
+      const headerFileName = document.getElementById('headerFileName');
+      
+      if (selectedFileNameDisplay && selectedFileNameText) {
+        selectedFileNameText.innerHTML = `<strong>Selected:</strong> <span style="color:#e60028;">${fileName}</span>`;
+        selectedFileNameDisplay.style.display = 'block';
+      }
+      
+      if (headerFileName) {
+        headerFileName.textContent = fileName;
+      }
+    }
+    
+    // Function to clear all file displays
+    function clearFileDisplays() {
+      const selectedFileNameDisplay = document.getElementById('selectedFileNameDisplay');
+      const headerFileName = document.getElementById('headerFileName');
+      
+      if (selectedFileNameDisplay) {
+        selectedFileNameDisplay.style.display = 'none';
+      }
+      
+      if (headerFileName) {
+        headerFileName.textContent = 'file with users and extension of .csv file';
+      }
+      
+      clearTotalRecordsDisplay();
+    }
+    
+    // Function to get the current file input element (handles both custom and standard inputs)
+    function getCurrentFileInput() {
+      // First try to get the hidden file input from our custom implementation
+      let fileInput = document.getElementById('csvFileInput');
+      
+      // If not found, try the original input
+      if (!fileInput) {
+        fileInput = document.getElementById('csvFile');
+      }
+      
+      return fileInput;
+    }
+    
+    // Function to check if we have a valid file selected
+    function hasValidFileSelected() {
+      const fileInput = getCurrentFileInput();
+      return fileInput && fileInput.files && fileInput.files.length > 0;
+    }
+    
+    // Function to get the selected file
+    function getSelectedFile() {
+      const fileInput = getCurrentFileInput();
+      if (fileInput && fileInput.files && fileInput.files.length > 0) {
+        return fileInput.files[0];
+      }
+      return null;
+    }
+    
+    // Function to show a message when user needs to reselect file
+    function showFileReselectionMessage() {
+      const savedFileName = localStorage.getItem('lastSelectedFileName');
+      if (savedFileName && !hasValidFileSelected()) {
+        // Show a message to the user that they need to reselect the file
+        const statusBox = document.getElementById('statusBox');
+        if (statusBox) {
+          statusBox.innerHTML = `
+            <div class="alert alert-warning">
+              <strong>File Selection Required</strong><br>
+              You have a saved file name (${savedFileName}) but the actual file is not selected.<br>
+              Please click "Choose File" to reselect your CSV file.
+            </div>
+          `;
+        }
+        return true;
+      }
+      return false;
     }
   </script>
 </body>
