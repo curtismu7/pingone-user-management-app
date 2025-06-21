@@ -208,21 +208,35 @@ class AuthService {
   /**
    * Validate environment ID format
    * @param {string} environmentId - Environment ID to validate
-   * @returns {boolean} True if valid UUID format
+   * @returns {boolean} True if valid format
    */
   validateEnvironmentId(environmentId) {
+    if (!environmentId || typeof environmentId !== 'string') {
+      return false;
+    }
+    
+    // Allow both UUID format and alphanumeric format
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    return uuidRegex.test(environmentId);
+    const alphanumericRegex = /^[a-zA-Z0-9]{8,}$/;
+    
+    return uuidRegex.test(environmentId) || alphanumericRegex.test(environmentId);
   }
 
   /**
    * Validate client ID format
    * @param {string} clientId - Client ID to validate
-   * @returns {boolean} True if valid UUID format
+   * @returns {boolean} True if valid format
    */
   validateClientId(clientId) {
+    if (!clientId || typeof clientId !== 'string') {
+      return false;
+    }
+    
+    // Allow both UUID format and alphanumeric format
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    return uuidRegex.test(clientId);
+    const alphanumericRegex = /^[a-zA-Z0-9]{8,}$/;
+    
+    return uuidRegex.test(clientId) || alphanumericRegex.test(clientId);
   }
 
   /**
@@ -231,30 +245,36 @@ class AuthService {
    * @returns {boolean} True if valid format
    */
   validateClientSecret(clientSecret) {
-    // PingOne client secrets are typically base64 encoded
-    return clientSecret && clientSecret.length >= 20;
+    // PingOne client secrets can vary in length and format
+    return clientSecret && typeof clientSecret === 'string' && clientSecret.length >= 8;
   }
 
   /**
-   * Validate all credentials
+   * Validate all credentials with detailed error messages
    * @param {string} environmentId - Environment ID
    * @param {string} clientId - Client ID
    * @param {string} clientSecret - Client secret
-   * @returns {Object} Validation result
+   * @returns {Object} Validation result with detailed errors
    */
   validateAllCredentials(environmentId, clientId, clientSecret) {
     const errors = [];
 
-    if (!environmentId || !this.validateEnvironmentId(environmentId)) {
-      errors.push('Invalid Environment ID format');
+    if (!environmentId) {
+      errors.push('Environment ID is required');
+    } else if (!this.validateEnvironmentId(environmentId)) {
+      errors.push('Environment ID must be a valid UUID format (e.g., 12345678-1234-1234-1234-123456789012) or alphanumeric string');
     }
 
-    if (!clientId || !this.validateClientId(clientId)) {
-      errors.push('Invalid Client ID format');
+    if (!clientId) {
+      errors.push('Client ID is required');
+    } else if (!this.validateClientId(clientId)) {
+      errors.push('Client ID must be a valid UUID format (e.g., 12345678-1234-1234-1234-123456789012) or alphanumeric string');
     }
 
-    if (!clientSecret || !this.validateClientSecret(clientSecret)) {
-      errors.push('Invalid Client Secret format');
+    if (!clientSecret) {
+      errors.push('Client Secret is required');
+    } else if (!this.validateClientSecret(clientSecret)) {
+      errors.push('Client Secret must be at least 8 characters long');
     }
 
     return {
