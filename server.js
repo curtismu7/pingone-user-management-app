@@ -10,6 +10,7 @@
  * - File upload handling
  * - Real-time logging and status tracking
  * - CORS support for cross-origin requests
+ * - Enhanced security with rate limiting and input validation
  * 
  * To run: npm start (which executes: node server.js)
  * Server runs on: http://localhost:3001
@@ -23,15 +24,66 @@ const fs = require('fs');
 const cors = require('cors');
 const os = require('os');
 const path = require('path');
-const getWorkerToken = require('./get-worker-token'); // Import the function
+
+// Import configuration and services
+const { config, validateConfig } = require('./config');
+const authService = require('./services/auth');
+const {
+  globalRateLimiter,
+  authRateLimiter,
+  uploadRateLimiter,
+  validateInput,
+  errorHandler,
+  requestLogger,
+  securityHeaders,
+  corsOptions
+} = require('./middleware/security');
+
+// Validate configuration on startup
+validateConfig();
 
 const app = express();
-const upload = multer({ dest: 'uploads/' });
 
-// Remove hardcoded PINGONE_ENV_ID
-// const PINGONE_ENV_ID = '7853c888-ad7d-470c-add6-597397698767';
+// Security middleware
+app.use(securityHeaders);
+app.use(cors(corsOptions));
+app.use(globalRateLimiter);
+app.use(requestLogger);
 
-app.use(cors());
+// Body parsing middleware
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Configure multer for file uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, config.upload.destination);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, file.fieldname + '-' + uniqueSuffix);
+  }
+});
+
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: config.upload.maxSize,
+    files: 1
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = config.upload.allowedTypes;
+    const fileExtension = file.originalname.toLowerCase().substring(
+      file.originalname.lastIndexOf('.')
+    );
+    
+    if (allowedTypes.includes(fileExtension)) {
+      cb(null, true);
+    } else {
+      cb(new Error(`Invalid file type. Allowed types: ${allowedTypes.join(', ')}`));
+    }
+  }
+});
 
 // Serve static files from the current directory
 app.use(express.static(__dirname));
@@ -49,21 +101,22 @@ app.post('/cancel', (req, res) => {
 });
 
 // Use absolute path for log file
-const statusLogPath = path.resolve(__dirname, 'import-status.log');
+const statusLogPath = path.resolve(__dirname, config.logging.file);
 
 // Helper to safely write to log file
 function safeAppendLog(content) {
   try {
     fs.appendFileSync(statusLogPath, content);
   } catch (err) {
-    console.error('Error writing to import-status.log:', err);
+    console.error(`Error writing to ${config.logging.file}:`, err);
   }
 }
+
 function safeWriteLog(content) {
   try {
     fs.writeFileSync(statusLogPath, content);
   } catch (err) {
-    console.error('Error writing to import-status.log:', err);
+    console.error(`Error writing to ${config.logging.file}:`, err);
   }
 }
 
@@ -73,13 +126,13 @@ function getServerUrls() {
   const urls = [];
   
   // Add localhost URL
-  urls.push('http://127.0.0.1:3001');
+  urls.push(`http://127.0.0.1:${config.server.port}`);
   
   // Add network interface URLs
   Object.keys(interfaces).forEach((name) => {
     interfaces[name].forEach((interface) => {
       if (interface.family === 'IPv4' && !interface.internal) {
-        urls.push(`http://${interface.address}:3001`);
+        urls.push(`http://${interface.address}:${config.server.port}`);
       }
     });
   });
@@ -139,8 +192,69 @@ process.on('SIGTERM', () => {
   process.exit(0);
 });
 
-app.post('/get-worker-token', async (req, res) => {
+// Enhanced authentication endpoint with rate limiting and validation
+app.post('/get-worker-token', authRateLimiter, validateInput, async (req, res) => {
   const startTime = writeRunHeader();
+  
+  try {
+    const { environmentId, clientId, clientSecret } = req.body;
+    
+    logStatus(`/get-worker-token | start`);
+    
+    // Validate input
+    const validation = authService.validateAllCredentials(environmentId, clientId, clientSecret);
+    if (!validation.isValid) {
+      logStatus(`/get-worker-token | validation_error`);
+      writeRunFooter(startTime);
+      return res.status(400).json({ 
+        error: 'Invalid credentials format.',
+        details: validation.errors
+      });
+    }
+    
+    const token = await authService.getWorkerToken(environmentId, clientId, clientSecret);
+    logStatus(`/get-worker-token | success`);
+    writeRunFooter(startTime);
+    res.json({ access_token: token });
+  } catch (err) {
+    logStatus(`/get-worker-token | error`);
+    const timestamp = new Date().toISOString();
+    const errorMsg = err && err.stack ? err.stack : (err && err.message ? err.message : JSON.stringify(err));
+    const logEntry = `${timestamp} | Get Worker Token failed | ${errorMsg}`;
+    safeAppendLog(logEntry + '\n');
+    writeRunFooter(startTime);
+    
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Enhanced environment details endpoint
+app.post('/get-environment-details', authRateLimiter, validateInput, async (req, res) => {
+  const startTime = writeRunHeader();
+  
+  try {
+    const { environmentId, clientId, clientSecret } = req.body;
+    
+    logStatus(`/get-environment-details | start`);
+    
+    // Validate input
+    const validation = authService.validateAllCredentials(environmentId, clientId, clientSecret);
+    if (!validation.isValid) {
+      logStatus(`/get-environment-details | validation_error`);
+      writeRunFooter(startTime);
+      return res.status(400).json({ 
+        error: 'Invalid credentials format.',
+        details: validation.errors
+      });
+    }
+    
+    const details = await authService.getEnvironmentDetails(environmentId, clientId, clientSecret);
+    logStatus(`/get-environment-details | success`);
+    writeRunFooter(startTime);
+    res.json(details);
+  } catch (err) {
+    logStatus(`/get-environment-details | error`);
+    writeRunFooter(startTime);
   let body = '';
   req.on('data', chunk => { body += chunk; });
   req.on('end', async () => {
@@ -169,6 +283,75 @@ app.post('/get-worker-token', async (req, res) => {
       let errorMessage = 'Failed to get worker token.';
       if (err.response) {
         // PingOne API error response
+        if (err.response.status === 401) {
+          errorMessage = 'Invalid credentials. Please check your Client ID and Client Secret.';
+        } else if (err.response.status === 404) {
+          errorMessage = 'Environment not found. Please check your Environment ID.';
+        } else if (err.response.status === 400) {
+          errorMessage = 'Invalid request. Please check your credentials format.';
+        } else {
+          errorMessage = `PingOne API error: ${err.response.status} - ${err.response.statusText}`;
+        }
+      } else if (err.code === 'ENOTFOUND') {
+        errorMessage = 'Network error. Please check your internet connection.';
+      } else if (err.code === 'ECONNREFUSED') {
+        errorMessage = 'Connection refused. Please try again later.';
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      res.status(500).json({ error: errorMessage });
+    }
+  });
+});
+
+// New endpoint to get environment details
+app.post('/get-environment-details', async (req, res) => {
+  const startTime = writeRunHeader();
+  let body = '';
+  req.on('data', chunk => { body += chunk; });
+  req.on('end', async () => {
+    try {
+      const { environmentId, clientId, clientSecret } = JSON.parse(body);
+      logStatus(`/get-environment-details | start`);
+      if (!environmentId || !clientId || !clientSecret) {
+        logStatus(`/get-environment-details | error`);
+        writeRunFooter(startTime);
+        return res.status(400).json({ error: 'Missing required credentials.' });
+      }
+      
+      // Get access token first
+      const accessToken = await getWorkerToken(environmentId, clientId, clientSecret);
+      
+      // Fetch environment details
+      const response = await axios.get(
+        `https://api.pingone.com/v1/environments/${environmentId}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      
+      const environmentName = response.data.name;
+      logStatus(`/get-environment-details | success`);
+      writeRunFooter(startTime);
+      res.json({ 
+        environment_name: environmentName,
+        environment_id: environmentId
+      });
+    } catch (err) {
+      logStatus(`/get-environment-details | error`);
+      const timestamp = new Date().toISOString();
+      const errorMsg = err && err.stack ? err.stack : (err && err.message ? err.message : JSON.stringify(err));
+      const logEntry = `${timestamp} | Get Environment Details failed | ${errorMsg}`;
+      safeAppendLog(logEntry + '\n');
+      writeRunFooter(startTime);
+      
+      // Return more specific error messages based on the error type
+      let errorMessage = 'Failed to get environment details.';
+      if (err.response) {
         if (err.response.status === 401) {
           errorMessage = 'Invalid credentials. Please check your Client ID and Client Secret.';
         } else if (err.response.status === 404) {
@@ -448,7 +631,7 @@ app.post('/import-users', upload.single('csv'), (req, res) => {
                   }
                 );
                 logStatus(`/import-users | ${user.username} | created`);
-                report.push({ username: user.username, status: 'created' });
+            report.push({ username: user.username, status: 'created' });
                 successCount++;
               } else {
                 // User exists, update
@@ -706,8 +889,8 @@ app.post('/delete-users', upload.single('csv'), (req, res) => {
         logStatus(`/delete-users | success`);
         writeRunFooter(startTime);
         if (res.write) {
-          res.write(JSON.stringify(report) + '\n');
-          res.end();
+        res.write(JSON.stringify(report) + '\n');
+        res.end();
         } else {
           res.json(report);
         }

@@ -1,0 +1,44 @@
+<!-- Settings Sidebar Component -->
+<div class="sidebar">
+  <div class="sidebar-logo" style="background:#fff;padding:0.7rem 0.7rem 0.7rem 0.7rem;border-radius:12px;margin:1.2rem 0 0.5rem 0;box-sizing:border-box;display:flex;align-items:center;justify-content:center;width:calc(100% - 0.7rem*2);">
+    <img src="https://github.com/curtismu7/CDN/blob/main/Ping%20Identity_idEzgMTpXK_2.png?raw=true" alt="Ping Identity Logo">
+  </div>
+  <a class="sidebar-action" style="width:calc(100% - 2rem);margin:1.2rem 1rem 0.7rem 1rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem;" href="index.html">
+    <span class="nav-icon" style="font-size: 1.1rem; margin-right: 0.3rem;">⬅️</span>
+    <span>Main Page</span>
+  </a>
+  <nav class="sidebar-nav" id="sidebarNav">
+    <div class="nav-section">
+      <div class="nav-link nav-group" data-section="user-actions">
+        <span class="nav-icon">🧑‍💻</span>
+        <span>User Actions</span>
+        <span class="nav-caret">▼</span>
+      </div>
+      <div class="nav-sub-links">
+        <a class="nav-link nav-sublink" id="chooseFileSidebar" href="index.html" title="Select a CSV file to import or modify users" onclick="if(window.location.pathname.includes('settings.html')) { event.preventDefault(); window.location.href='index.html?triggerFileChooser=true'; } else { event.preventDefault(); document.getElementById('csvFile').click(); }">
+          <span class="nav-icon">📁</span>
+          <span>Choose File</span>
+        </a>
+        <a class="nav-link nav-sublink" id="importUsersSidebar" href="index.html" title="Import users from the selected CSV file">
+          <span class="nav-icon">⬆️</span>
+          <span>Import Users</span>
+        </a>
+        <a class="nav-link nav-sublink" id="modifyUsersSidebar" href="index.html" title="Modify existing users using the selected CSV file">
+          <span class="nav-icon">✏️</span>
+          <span>Modify Users</span>
+        </a>
+        <a class="nav-link nav-sublink" id="deleteSidebar" href="index.html" title="Delete all users in CSV">
+          <span class="nav-icon">🗑️</span>
+          <span>Delete Users</span>
+        </a>
+      </div>
+    </div>
+    <div style="height: 1px; background: rgba(255, 255, 255, 0.2); margin: 0.5rem 1rem;"></div>
+    <div class="nav-section">
+      <a class="nav-link active" id="settingsSidebar" href="settings.html" title="You are on the settings page">
+        <span class="nav-icon">⚙️</span>
+        <span>Settings</span>
+      </a>
+    </div>
+  </nav>
+</div> 
