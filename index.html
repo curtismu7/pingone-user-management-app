@@ -3215,5 +3215,89 @@
       });
     }
   </script>
+  
+  <!-- Unified Popup System -->
+  <div id="unifiedPopup" style="
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 10000;
+    backdrop-filter: blur(2px);
+  ">
+    <div style="
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: #f8f9fa;
+      border: 1px solid #000;
+      border-radius: 12px;
+      padding: 0;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      max-width: 500px;
+      width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
+    ">
+      <!-- Header -->
+      <div style="
+        background: #e9ecef;
+        color: #212529;
+        padding: 1.5rem 2rem 1rem 2rem;
+        border-radius: 12px 12px 0 0;
+        position: relative;
+        border-bottom: 1px solid #000;
+      ">
+        <button id="closeUnifiedPopup" style="
+          position: absolute;
+          top: 1rem;
+          right: 1.5rem;
+          background: none;
+          border: none;
+          color: #212529;
+          font-size: 1.5rem;
+          cursor: pointer;
+          padding: 0;
+          width: 30px;
+          height: 30px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 50%;
+          transition: background-color 0.2s;
+        " onmouseover="this.style.backgroundColor='rgba(0,0,0,0.1)'" onmouseout="this.style.backgroundColor='transparent'">✖</button>
+        <h2 id="popupTitle" style="
+          margin: 0;
+          color: #212529;
+          font-size: 1.5rem;
+          font-weight: 600;
+        ">Popup Title</h2>
+      </div>
+      
+      <!-- Body -->
+      <div style="padding: 2rem;">
+        <div id="popupContent" style="
+          color: #212529;
+          line-height: 1.6;
+          margin-bottom: 1.5rem;
+        ">
+          <!-- Content will be populated dynamically -->
+        </div>
+        
+        <!-- Buttons -->
+        <div id="popupButtons" style="
+          display: flex;
+          gap: 1rem;
+          justify-content: flex-end;
+        ">
+          <!-- Buttons will be populated dynamically -->
+        </div>
+      </div>
+    </div>
+  </div>
 </body>
 </html>

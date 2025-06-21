@@ -429,6 +429,232 @@ function saveModifyAttributes() {
   localStorage.setItem('modify_attributes', JSON.stringify(attributes));
 }
 
+// Modal Spinner Control Functions
+function showSpinnerModal(action, totalItems = 0) {
+  const modal = document.getElementById('spinnerModal');
+  const title = document.getElementById('modalTitle');
+  const subtitle = document.getElementById('modalSubtitle');
+  const progress = document.getElementById('modalProgress');
+  
+  if (!modal) return;
+  
+  // Set action-specific text
+  switch(action) {
+    case 'Import':
+      title.textContent = 'Importing Users...';
+      subtitle.textContent = 'Please wait while we import users from your CSV file';
+      break;
+    case 'Delete':
+      title.textContent = 'Deleting Users...';
+      subtitle.textContent = 'Please wait while we delete users from your PingOne environment';
+      break;
+    case 'Modify':
+      title.textContent = 'Modifying Users...';
+      subtitle.textContent = 'Please wait while we update user attributes';
+      break;
+    default:
+      title.textContent = 'Processing...';
+      subtitle.textContent = 'Please wait while we process your request';
+  }
+  
+  if (totalItems > 0) {
+    progress.textContent = `Processing 0 of ${totalItems} items...`;
+  } else {
+    progress.textContent = '';
+  }
+  
+  modal.style.display = 'block';
+}
+
+function hideSpinnerModal() {
+  const modal = document.getElementById('spinnerModal');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+  // Also hide worker token status when hiding spinner
+  hideWorkerTokenStatus();
+}
+
+// Worker Token Status Functions
+function showWorkerTokenStatus() {
+  const workerTokenStatus = document.getElementById('workerTokenStatus');
+  const workerTokenText = document.getElementById('workerTokenText');
+  
+  if (workerTokenStatus && workerTokenText) {
+    workerTokenText.textContent = 'Getting Worker Token...';
+    workerTokenStatus.style.display = 'block';
+    workerTokenStatus.style.color = '#16a34a';
+    workerTokenStatus.style.background = '#f0fdf4';
+    workerTokenStatus.style.borderColor = '#bbf7d0';
+  }
+}
+
+function updateWorkerTokenSuccess() {
+  const workerTokenStatus = document.getElementById('workerTokenStatus');
+  const workerTokenText = document.getElementById('workerTokenText');
+  
+  if (workerTokenStatus && workerTokenText) {
+    workerTokenText.textContent = 'Getting Worker Token ✅';
+    workerTokenStatus.style.color = '#16a34a';
+    workerTokenStatus.style.background = '#f0fdf4';
+    workerTokenStatus.style.borderColor = '#bbf7d0';
+  }
+}
+
+function updateWorkerTokenError() {
+  const workerTokenStatus = document.getElementById('workerTokenStatus');
+  const workerTokenText = document.getElementById('workerTokenText');
+  
+  if (workerTokenStatus && workerTokenText) {
+    workerTokenText.textContent = 'Failed to retrieve Worker Token ❌';
+    workerTokenStatus.style.color = '#dc2626';
+    workerTokenStatus.style.background = '#fef2f2';
+    workerTokenStatus.style.borderColor = '#fecaca';
+  }
+}
+
+function hideWorkerTokenStatus() {
+  const workerTokenStatus = document.getElementById('workerTokenStatus');
+  if (workerTokenStatus) {
+    workerTokenStatus.style.display = 'none';
+  }
+}
+
+function updateSpinnerProgress(completed, total, batchCounter = 0, summary = false, isComplete = false) {
+  const progress = document.getElementById('modalProgress');
+  if (progress && total > 0) {
+    if (isComplete) {
+      progress.textContent = 'Processing complete';
+    } else {
+      // Show batch counter if provided, otherwise use the completed count
+      const displayCount = batchCounter > 0 ? batchCounter * 5 : Math.min(completed * 5, total);
+      
+      if (summary) {
+        progress.textContent = `📊 Summary: ${displayCount} of ${total} completed so far...`;
+      } else {
+        progress.textContent = `${displayCount} of ${total} completed...`;
+      }
+    }
+  }
+}
+
+// Action Status System
+const actionStatus = {
+  showCredentialsValidated: function() {
+    const statusText = document.getElementById('credentialsStatusText');
+    if (statusText) {
+      statusText.textContent = '✅ Credentials validated';
+      statusText.style.color = '#16a34a';
+    }
+  },
+  
+  showProgress: function(action, totalItems) {
+    const statusText = document.getElementById('actionStatusText');
+    if (statusText) {
+      statusText.textContent = `${action} in progress...`;
+    }
+    showSpinnerModal(action, totalItems);
+  },
+  
+  updateProgress: function(completed, total) {
+    updateSpinnerProgress(completed, total);
+  },
+  
+  showSuccess: function() {
+    const statusText = document.getElementById('actionStatusText');
+    if (statusText) {
+      statusText.textContent = '✅ Operation completed successfully';
+      statusText.style.color = '#16a34a';
+    }
+    hideSpinnerModal();
+  },
+  
+  showError: function(message) {
+    const statusText = document.getElementById('actionStatusText');
+    if (statusText) {
+      statusText.textContent = `❌ ${message}`;
+      statusText.style.color = '#dc2626';
+    }
+    hideSpinnerModal();
+  }
+};
+
+// Credential validation functions
+async function validateCredentials() {
+  // Check if we have stored credentials
+  const environmentId = localStorage.getItem('pingone_env_id');
+  const clientId = localStorage.getItem('pingone_client_id');
+  const clientSecret = localStorage.getItem('pingone_client_secret');
+  
+  if (!environmentId || !clientId || !clientSecret) {
+    updateCredentialsStatus('Missing credentials', '#dc2626');
+    return false;
+  }
+  
+  // Check if we have a valid token using the global tokenManager
+  if (!window.tokenManager) {
+    // Initialize token manager if not available
+    if (typeof TokenManager !== 'undefined') {
+      window.tokenManager = new TokenManager();
+    } else {
+      updateCredentialsStatus('Token manager not available', '#dc2626');
+      return false;
+    }
+  }
+  
+  try {
+    const token = await window.tokenManager.getValidToken();
+    
+    if (!token) {
+      updateCredentialsStatus('Invalid credentials', '#dc2626');
+      return false;
+    }
+    
+    updateCredentialsStatus('Using saved credentials', '#16a34a');
+    return true;
+  } catch (error) {
+    console.error('Credential validation error:', error);
+    updateCredentialsStatus('Credential validation failed', '#dc2626');
+    return false;
+  }
+}
+
+function updateCredentialsStatus(message, color) {
+  const statusText = document.getElementById('credentialsStatusText');
+  if (statusText) {
+    statusText.textContent = message;
+    statusText.style.color = color;
+  }
+}
+
+// Function to update last action status
+function updateLastActionStatus(action, successCount, skippedCount) {
+  const lastActionText = document.getElementById('lastActionText');
+  if (lastActionText) {
+    const now = new Date();
+    const timeString = now.toLocaleTimeString('en-US', { 
+      hour: 'numeric', 
+      minute: '2-digit',
+      hour12: true 
+    });
+    
+    let message = '';
+    if (action === 'import') {
+      message = `Last imported ${successCount} items at ${timeString}`;
+    } else if (action === 'delete') {
+      message = `Last deleted ${successCount} items at ${timeString}`;
+    } else if (action === 'modify') {
+      message = `Last modified ${successCount} items at ${timeString}`;
+    }
+    
+    if (skippedCount > 0) {
+      message += ` (${skippedCount} skipped)`;
+    }
+    
+    lastActionText.textContent = message;
+  }
+}
+
 // Make UI functions globally available
 window.showError = showError;
 window.showSuccess = showSuccess;
@@ -440,6 +666,16 @@ window.showActionStatus = showActionStatus;
 window.hideActionStatus = hideActionStatus;
 window.updateActionProgress = updateActionProgress;
 window.showActionComplete = showActionComplete;
+window.showSpinnerModal = showSpinnerModal;
+window.hideSpinnerModal = hideSpinnerModal;
+window.showWorkerTokenStatus = showWorkerTokenStatus;
+window.updateWorkerTokenSuccess = updateWorkerTokenSuccess;
+window.updateWorkerTokenError = updateWorkerTokenError;
+window.hideWorkerTokenStatus = hideWorkerTokenStatus;
+window.updateSpinnerProgress = updateSpinnerProgress;
+window.validateCredentials = validateCredentials;
+window.updateCredentialsStatus = updateCredentialsStatus;
+window.updateLastActionStatus = updateLastActionStatus;
 
 // Initialize global UI object
 window.indexUI = {
@@ -452,5 +688,18 @@ window.indexUI = {
   showActionStatus: showActionStatus,
   hideActionStatus: hideActionStatus,
   updateActionProgress: updateActionProgress,
-  showActionComplete: showActionComplete
-}; 
+  showActionComplete: showActionComplete,
+  showSpinnerModal: showSpinnerModal,
+  hideSpinnerModal: hideSpinnerModal,
+  showWorkerTokenStatus: showWorkerTokenStatus,
+  updateWorkerTokenSuccess: updateWorkerTokenSuccess,
+  updateWorkerTokenError: updateWorkerTokenError,
+  hideWorkerTokenStatus: hideWorkerTokenStatus,
+  updateSpinnerProgress: updateSpinnerProgress,
+  validateCredentials: validateCredentials,
+  updateCredentialsStatus: updateCredentialsStatus,
+  updateLastActionStatus: updateLastActionStatus
+};
+
+// Initialize action status system
+window.actionStatus = actionStatus; 
