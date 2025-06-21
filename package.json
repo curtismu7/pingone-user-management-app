@@ -1,28 +1,61 @@
 {
-  "name": "oidc-implicit-sample",
+  "name": "pingone-user-management-app",
   "version": "0.0.3",
   "private": true,
-  "description": "Simple Javascript client that implements the OpenID Connect implicit flow",
+  "description": "PingOne User Management Application with import, delete, and modify capabilities",
   "keywords": [
-    "openidconnect"
+    "pingone",
+    "user-management",
+    "openidconnect",
+    "identity"
   ],
   "homepage": "https://github.com/pingidentity/pingone-sample-js",
+  "main": "server-enhanced.js",
+  "scripts": {
+    "start": "node server-enhanced.js",
+    "dev": "nodemon server-enhanced.js",
+    "server": "node server-enhanced.js",
+    "server:legacy": "node server.js",
+    "build": "cp node_modules/@ping-identity/p14c-js-sdk-auth/dist/browser/@ping-identity/p14c-js-sdk-auth.js p14c-js-sdk-auth.js",
+    "security": "npm audit",
+    "security:fix": "npm audit fix",
+    "security:force": "npm audit fix --force",
+    "security:audit": "node scripts/security-monitor.js",
+    "lint": "echo 'Linting not configured yet'",
+    "test": "echo 'Testing not configured yet'",
+    "validate": "node -e \"require('./config').validateConfig()\"",
+    "setup": "cp env.example .env && echo 'Please edit .env with your PingOne credentials'",
+    "clean": "rm -rf uploads/* && rm -f import-status.log",
+    "logs": "tail -f import-status.log"
+  },
   "dependencies": {
     "@ping-identity/p14c-js-sdk-auth": "^1.0.0-pre.2",
     "axios": "^1.10.0",
     "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
     "express": "^5.1.0",
+    "express-rate-limit": "^7.2.0",
+    "helmet": "^8.0.0",
     "multer": "^2.0.1",
     "papaparse": "^5.5.3"
   },
-  "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js",
-    "server": "node server.js",
-    "build": "cp node_modules/@ping-identity/p14c-js-sdk-auth/dist/browser/@ping-identity/p14c-js-sdk-auth.js p14c-js-sdk-auth.js"
+  "devDependencies": {
+    "nodemon": "^3.1.0"
+  },
+  "engines": {
+    "node": ">=14.0.0",
+    "npm": ">=6.0.0"
   },
   "ignore": [
     "**/.*",
     "node_modules"
-  ]
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pingidentity/pingone-sample-js.git"
+  },
+  "bugs": {
+    "url": "https://github.com/pingidentity/pingone-sample-js/issues"
+  },
+  "license": "MIT"
 }

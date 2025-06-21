@@ -1,0 +1,50 @@
+<!-- File Upload Section Component -->
+<div class="file-section">
+  <div class="section-title">Actions</div>
+  <div class="file-input-container">
+    <input type="file" id="csvFile" accept=".csv" class="enhanced-input" data-tippy-content="Select CSV file with user data" />
+    <div class="file-checkbox-row">
+      <input type="checkbox" id="saveFileNameCheckbox" class="unified-checkbox enhanced-input" data-tippy-content="Save file name to browser storage" />
+      <label for="saveFileNameCheckbox" class="file-checkbox-label">
+        Save file name
+        <span class="info-icon" data-tippy-content="Stores the selected file name across sessions and between pages"></span>
+      </label>
+    </div>
+    <div id="defaultFileIndicator" class="default-file-indicator"></div>
+    <!-- File name display area -->
+    <div id="selectedFileNameDisplay" style="
+      margin-top: 0.5rem;
+      padding: 0.5rem;
+      background: #f3f4f6;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      color: #374151;
+      display: none;
+      text-align: center;
+    ">
+      <span id="selectedFileNameText"></span>
+    </div>
+    <!-- Clear button for file input -->
+    <button type="button" id="clearFileBtn" class="button-tooltip" data-tippy-content="Clear the selected file and reset file input" style="
+      background: #e5e7eb;
+      color: #0033a0;
+      border: none;
+      border-radius: 6px;
+      padding: 0.5rem 0.9rem;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: background 0.2s;
+      margin-top: 0.5rem;
+      width: 100%;
+    ">Clear File Selection</button>
+  </div>
+  
+  <!-- Main action buttons -->
+  <div class="button-row">
+    <button class="unified-button button-tooltip" onclick="uploadCSV()" id="importUsersBtn" data-tippy-content="Import users from CSV file">Import Users</button>
+    <button class="unified-button button-tooltip" onclick="deleteCSVUsers()" id="deleteUsersBtn" data-tippy-content="Delete users from CSV file">Delete Users</button>
+    <button class="unified-button button-tooltip" onclick="modifyCSVUsers()" id="modifyUsersBtn" data-tippy-content="Modify users from CSV file">Modify Users</button>
+    <button class="unified-button button-tooltip" onclick="window.open('settings.html', '_blank')" id="settingsBtn" data-tippy-content="Open settings page">Settings</button>
+  </div>
+</div> 

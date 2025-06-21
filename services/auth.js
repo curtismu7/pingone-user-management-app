@@ -1,0 +1,233 @@
+/**
+ * Authentication Service for PingOne User Management Application
+ * 
+ * This service handles all authentication-related operations including:
+ * - Token management
+ * - Credential validation
+ * - Secure token storage
+ * - Token refresh
+ */
+
+const axios = require('axios');
+const { config } = require('../config');
+
+class AuthService {
+  constructor() {
+    this.tokenCache = new Map();
+    this.tokenExpiry = new Map();
+  }
+
+  /**
+   * Get worker token for PingOne API access
+   * @param {string} environmentId - PingOne environment ID
+   * @param {string} clientId - PingOne client ID
+   * @param {string} clientSecret - PingOne client secret
+   * @returns {Promise<string>} Access token
+   */
+  async getWorkerToken(environmentId, clientId, clientSecret) {
+    const cacheKey = `${environmentId}:${clientId}`;
+    const now = Date.now();
+    
+    // Check if we have a valid cached token
+    if (this.tokenCache.has(cacheKey)) {
+      const expiry = this.tokenExpiry.get(cacheKey);
+      if (expiry && expiry > now) {
+        return this.tokenCache.get(cacheKey);
+      }
+    }
+
+    try {
+      const tokenUrl = `${config.pingone.authUri}/${environmentId}/as/token`;
+      const params = new URLSearchParams();
+      params.append('grant_type', 'client_credentials');
+      params.append('scope', config.pingone.scopes);
+
+      const response = await axios.post(tokenUrl, params, {
+        auth: {
+          username: clientId,
+          password: clientSecret
+        },
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        timeout: 10000 // 10 second timeout
+      });
+
+      const { access_token, expires_in } = response.data;
+      
+      if (!access_token) {
+        throw new Error('No access token received from PingOne');
+      }
+
+      // Cache the token with expiry
+      this.tokenCache.set(cacheKey, access_token);
+      this.tokenExpiry.set(cacheKey, now + (expires_in * 1000) - 60000); // Expire 1 minute early
+
+      return access_token;
+    } catch (error) {
+      this.clearCache(cacheKey);
+      throw this.handleAuthError(error);
+    }
+  }
+
+  /**
+   * Validate PingOne credentials
+   * @param {string} environmentId - PingOne environment ID
+   * @param {string} clientId - PingOne client ID
+   * @param {string} clientSecret - PingOne client secret
+   * @returns {Promise<boolean>} True if credentials are valid
+   */
+  async validateCredentials(environmentId, clientId, clientSecret) {
+    try {
+      await this.getWorkerToken(environmentId, clientId, clientSecret);
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  /**
+   * Get environment details using credentials
+   * @param {string} environmentId - PingOne environment ID
+   * @param {string} clientId - PingOne client ID
+   * @param {string} clientSecret - PingOne client secret
+   * @returns {Promise<Object>} Environment details
+   */
+  async getEnvironmentDetails(environmentId, clientId, clientSecret) {
+    try {
+      const token = await this.getWorkerToken(environmentId, clientId, clientSecret);
+      
+      const response = await axios.get(`${config.pingone.apiUri}/v1/environments/${environmentId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        timeout: 10000
+      });
+
+      return {
+        id: response.data.id,
+        name: response.data.name,
+        description: response.data.description,
+        type: response.data.type,
+        region: response.data.region,
+        status: response.data.status
+      };
+    } catch (error) {
+      throw this.handleAuthError(error);
+    }
+  }
+
+  /**
+   * Clear token cache for specific credentials
+   * @param {string} cacheKey - Cache key to clear
+   */
+  clearCache(cacheKey) {
+    this.tokenCache.delete(cacheKey);
+    this.tokenExpiry.delete(cacheKey);
+  }
+
+  /**
+   * Clear all cached tokens
+   */
+  clearAllCache() {
+    this.tokenCache.clear();
+    this.tokenExpiry.clear();
+  }
+
+  /**
+   * Handle authentication errors
+   * @param {Error} error - The error to handle
+   * @returns {Error} Enhanced error with user-friendly message
+   */
+  handleAuthError(error) {
+    if (error.response) {
+      const { status, data } = error.response;
+      
+      switch (status) {
+        case 401:
+          return new Error('Invalid credentials. Please check your Client ID and Client Secret.');
+        case 403:
+          return new Error('Access denied. Please check your application permissions.');
+        case 404:
+          return new Error('Environment not found. Please check your Environment ID.');
+        case 400:
+          return new Error('Invalid request. Please check your credentials format.');
+        case 429:
+          return new Error('Rate limit exceeded. Please try again later.');
+        case 500:
+          return new Error('PingOne service error. Please try again later.');
+        default:
+          return new Error(`PingOne API error: ${status} - ${data?.message || 'Unknown error'}`);
+      }
+    } else if (error.code === 'ENOTFOUND') {
+      return new Error('Network error. Please check your internet connection.');
+    } else if (error.code === 'ECONNREFUSED') {
+      return new Error('Connection refused. Please try again later.');
+    } else if (error.code === 'ETIMEDOUT') {
+      return new Error('Request timeout. Please try again later.');
+    } else {
+      return error;
+    }
+  }
+
+  /**
+   * Validate environment ID format
+   * @param {string} environmentId - Environment ID to validate
+   * @returns {boolean} True if valid UUID format
+   */
+  validateEnvironmentId(environmentId) {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(environmentId);
+  }
+
+  /**
+   * Validate client ID format
+   * @param {string} clientId - Client ID to validate
+   * @returns {boolean} True if valid UUID format
+   */
+  validateClientId(clientId) {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(clientId);
+  }
+
+  /**
+   * Validate client secret format
+   * @param {string} clientSecret - Client secret to validate
+   * @returns {boolean} True if valid format
+   */
+  validateClientSecret(clientSecret) {
+    // PingOne client secrets are typically base64 encoded
+    return clientSecret && clientSecret.length >= 20;
+  }
+
+  /**
+   * Validate all credentials
+   * @param {string} environmentId - Environment ID
+   * @param {string} clientId - Client ID
+   * @param {string} clientSecret - Client secret
+   * @returns {Object} Validation result
+   */
+  validateAllCredentials(environmentId, clientId, clientSecret) {
+    const errors = [];
+
+    if (!environmentId || !this.validateEnvironmentId(environmentId)) {
+      errors.push('Invalid Environment ID format');
+    }
+
+    if (!clientId || !this.validateClientId(clientId)) {
+      errors.push('Invalid Client ID format');
+    }
+
+    if (!clientSecret || !this.validateClientSecret(clientSecret)) {
+      errors.push('Invalid Client Secret format');
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors
+    };
+  }
+}
+
+module.exports = new AuthService(); 

@@ -1,5 +1,3 @@
-# DEPRECATED
-
 # OIDC Authentication JavaScript Sample Guide
 The PingOne Authentication Sample is built on top of [OpenID Connect/OAuth 2 API endpoints](https://apidocs.pingidentity.com/pingone/platform/v1/api/) to give 
 you a basic overview how invoke PingOne's OIDC protocol to authenticate an existing user. 
