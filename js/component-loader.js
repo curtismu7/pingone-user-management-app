@@ -198,15 +198,24 @@ class ComponentLoader {
     const selectedFileNameDisplay = document.getElementById('selectedFileNameDisplay');
     const selectedFileNameText = document.getElementById('selectedFileNameText');
     
+    // Restore file name from localStorage on load
+    const savedFileName = localStorage.getItem('selectedFileName');
+    if (savedFileName && selectedFileNameText && selectedFileNameDisplay) {
+      selectedFileNameText.textContent = savedFileName + ' (please re-select)';
+      selectedFileNameDisplay.style.display = 'block';
+    }
+
     if (fileInput && clearFileBtn) {
       // File selection handler
       fileInput.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (file) {
+          localStorage.setItem('selectedFileName', file.name);
           selectedFileNameText.textContent = file.name;
           selectedFileNameDisplay.style.display = 'block';
         } else {
           selectedFileNameDisplay.style.display = 'none';
+          localStorage.removeItem('selectedFileName');
         }
       });
       
@@ -214,6 +223,7 @@ class ComponentLoader {
       clearFileBtn.addEventListener('click', () => {
         fileInput.value = '';
         selectedFileNameDisplay.style.display = 'none';
+        localStorage.removeItem('selectedFileName');
       });
     }
   }
