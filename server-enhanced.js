@@ -278,6 +278,11 @@ app.post('/import-users', uploadRateLimiter, upload.single('csv'), validateInput
   const startTime = writeRunHeader();
   cancelRequested = false;
   
+  // Set up streaming response
+  res.setHeader('Content-Type', 'text/plain');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  
   try {
     const filePath = req.file.path;
     const { environmentId, clientId, clientSecret } = req.body;
@@ -287,10 +292,8 @@ app.post('/import-users', uploadRateLimiter, upload.single('csv'), validateInput
     if (!validation.isValid) {
       logStatus(`/import-users | validation_error`);
       writeRunFooter(startTime);
-      return res.status(400).json({ 
-        error: 'Invalid credentials format.',
-        details: validation.errors
-      });
+      res.write(JSON.stringify({ error: 'Invalid credentials format.', details: validation.errors }) + '\n');
+      return res.end();
     }
     
     // Get access token
@@ -327,20 +330,25 @@ app.post('/import-users', uploadRateLimiter, upload.single('csv'), validateInput
       }
     }
     
-    // Process users
+    // Send initial progress
+    res.write(JSON.stringify({ progress: 'started', total: users.length, processed: 0 }) + '\n');
+    
+    // Process users with progress updates
     let successCount = 0;
     let errorCount = 0;
     const errors = [];
+    let batchCounter = 0;
     
     for (let i = 0; i < users.length; i++) {
       if (cancelRequested) {
         logStatus(`/import-users | cancelled`);
+        res.write(JSON.stringify({ progress: 'cancelled', processed: i, success: successCount, error: errorCount }) + '\n');
         break;
       }
       
       try {
         const user = users[i];
-        await this.createUser(user, environmentId, accessToken);
+        await createUser(user, environmentId, accessToken);
         successCount++;
         logStatus(`/import-users | user_${i + 1}_success | ${user.username || user.email}`);
       } catch (error) {
@@ -348,6 +356,20 @@ app.post('/import-users', uploadRateLimiter, upload.single('csv'), validateInput
         const errorMsg = `User ${i + 1} (${users[i].username || users[i].email}): ${error.message}`;
         errors.push(errorMsg);
         logStatus(`/import-users | user_${i + 1}_error | ${errorMsg}`);
+      }
+      
+      // Send progress update every 5 users or on the last user
+      if ((i + 1) % 5 === 0 || i === users.length - 1) {
+        batchCounter++;
+        const processedCount = i + 1;
+        res.write(JSON.stringify({ 
+          progress: 'processing', 
+          processed: processedCount, 
+          total: users.length,
+          batchCounter: batchCounter,
+          success: successCount, 
+          error: errorCount 
+        }) + '\n');
       }
     }
     
@@ -359,21 +381,26 @@ app.post('/import-users', uploadRateLimiter, upload.single('csv'), validateInput
     }
     
     const result = {
+      progress: 'complete',
       success: successCount,
       errors: errorCount,
       total: users.length,
       errorDetails: errors,
-      cancelled: cancelRequested
+      cancelled: cancelRequested,
+      batchCounter: batchCounter
     };
     
     logStatus(`/import-users | complete | ${JSON.stringify(result)}`);
     writeRunFooter(startTime);
     
-    res.json(result);
+    // Send final result
+    res.write(JSON.stringify(result) + '\n');
+    res.end();
   } catch (err) {
     logStatus(`/import-users | error | ${err.message}`);
     writeRunFooter(startTime);
-    res.status(500).json({ error: err.message });
+    res.write(JSON.stringify({ error: err.message }) + '\n');
+    res.end();
   }
 });
 
@@ -434,6 +461,172 @@ async function createUser(user, environmentId, accessToken) {
   });
   
   return response.data;
+}
+
+// Enhanced user delete endpoint with security
+app.post('/delete-users', uploadRateLimiter, upload.single('csv'), validateInput, async (req, res) => {
+  const startTime = writeRunHeader();
+  cancelRequested = false;
+  
+  // Set up streaming response
+  res.setHeader('Content-Type', 'text/plain');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  
+  try {
+    const filePath = req.file.path;
+    const { environmentId, clientId, clientSecret } = req.body;
+    
+    // Validate credentials
+    const validation = authService.validateAllCredentials(environmentId, clientId, clientSecret);
+    if (!validation.isValid) {
+      logStatus(`/delete-users | validation_error`);
+      writeRunFooter(startTime);
+      res.write(JSON.stringify({ error: 'Invalid credentials format.', details: validation.errors }) + '\n');
+      return res.end();
+    }
+    
+    // Get access token
+    const accessToken = await authService.getWorkerToken(environmentId, clientId, clientSecret);
+    
+    // Parse CSV file
+    const csvData = fs.readFileSync(filePath, 'utf8');
+    const results = Papa.parse(csvData, {
+      header: true,
+      skipEmptyLines: true,
+      error: (error) => {
+        throw new Error(`CSV parsing error: ${error.message}`);
+      }
+    });
+    
+    if (results.errors.length > 0) {
+      throw new Error(`CSV parsing errors: ${results.errors.map(e => e.message).join(', ')}`);
+    }
+    
+    const users = results.data;
+    
+    // Validate user count
+    if (users.length > config.validation.maxUsersPerImport) {
+      throw new Error(`Too many users. Maximum allowed: ${config.validation.maxUsersPerImport}`);
+    }
+    
+    // Send initial progress
+    res.write(JSON.stringify({ progress: 'started', total: users.length, processed: 0 }) + '\n');
+    
+    // Process users with progress updates
+    let successCount = 0;
+    let errorCount = 0;
+    let notFoundCount = 0;
+    const errors = [];
+    let batchCounter = 0;
+    
+    for (let i = 0; i < users.length; i++) {
+      if (cancelRequested) {
+        logStatus(`/delete-users | cancelled`);
+        res.write(JSON.stringify({ progress: 'cancelled', processed: i, success: successCount, error: errorCount }) + '\n');
+        break;
+      }
+      
+      try {
+        const user = users[i];
+        const userId = await findUserByUsername(user.username, environmentId, accessToken);
+        
+        if (userId) {
+          await deleteUser(userId, environmentId, accessToken);
+          successCount++;
+          logStatus(`/delete-users | user_${i + 1}_deleted | ${user.username}`);
+        } else {
+          notFoundCount++;
+          logStatus(`/delete-users | user_${i + 1}_not_found | ${user.username}`);
+        }
+      } catch (error) {
+        errorCount++;
+        const errorMsg = `User ${i + 1} (${users[i].username}): ${error.message}`;
+        errors.push(errorMsg);
+        logStatus(`/delete-users | user_${i + 1}_error | ${errorMsg}`);
+      }
+      
+      // Send progress update every 5 users or on the last user
+      if ((i + 1) % 5 === 0 || i === users.length - 1) {
+        batchCounter++;
+        const processedCount = i + 1;
+        res.write(JSON.stringify({ 
+          progress: 'processing', 
+          processed: processedCount, 
+          total: users.length,
+          batchCounter: batchCounter,
+          success: successCount, 
+          error: errorCount,
+          notFound: notFoundCount
+        }) + '\n');
+      }
+    }
+    
+    // Clean up uploaded file
+    try {
+      fs.unlinkSync(filePath);
+    } catch (err) {
+      console.error('Error deleting uploaded file:', err);
+    }
+    
+    const result = {
+      progress: 'complete',
+      success: successCount,
+      errors: errorCount,
+      notFound: notFoundCount,
+      total: users.length,
+      errorDetails: errors,
+      cancelled: cancelRequested,
+      batchCounter: batchCounter
+    };
+    
+    logStatus(`/delete-users | complete | ${JSON.stringify(result)}`);
+    writeRunFooter(startTime);
+    
+    // Send final result
+    res.write(JSON.stringify(result) + '\n');
+    res.end();
+  } catch (err) {
+    logStatus(`/delete-users | error | ${err.message}`);
+    writeRunFooter(startTime);
+    res.write(JSON.stringify({ error: err.message }) + '\n');
+    res.end();
+  }
+});
+
+// Helper function to find user by username
+async function findUserByUsername(username, environmentId, accessToken) {
+  const url = `${config.pingone.apiUri}/v1/environments/${environmentId}/users`;
+  
+  const response = await axios.get(url, {
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json'
+    },
+    params: {
+      filter: `username eq "${username}"`
+    },
+    timeout: 30000
+  });
+  
+  if (response.data._embedded && response.data._embedded.users && response.data._embedded.users.length > 0) {
+    return response.data._embedded.users[0].id;
+  }
+  
+  return null;
+}
+
+// Helper function to delete user
+async function deleteUser(userId, environmentId, accessToken) {
+  const url = `${config.pingone.apiUri}/v1/environments/${environmentId}/users/${userId}`;
+  
+  await axios.delete(url, {
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json'
+    },
+    timeout: 30000
+  });
 }
 
 // Error handling middleware (must be last)
