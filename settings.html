@@ -1198,21 +1198,18 @@
         </div>
         <div class="settings-section">
           <div style="font-size:1.45rem;font-weight:700;color:#0033a0;margin-bottom:1.1rem;">Default CSV File</div>
-          <div style="background:#f8fafc;border:1.5px solid #cbd5e1;border-radius:12px;padding:1.5rem 1.5rem 1rem 1.5rem;margin-bottom:1.2rem;width:100%;max-width:900px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;margin-left:auto;margin-right:auto;">
+          <div style="background:#f8fafc;border:1.5px solid #cbd5e1;border-radius:12px;padding:1.5rem;margin-bottom:1.2rem;width:100%;max-width:900px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;margin-left:auto;margin-right:auto;">
             <div style="display:flex;flex-direction:column;align-items:center;gap:1rem;width:100%;max-width:600px;">
               <div style="display:flex;align-items:center;gap:0.3em;margin-bottom:0.5rem;">
                 <span style="font-size:1.05rem;font-weight:500;color:#374151;">Default CSV File</span>
-                <span class="custom-tooltip" data-tooltip="Set a default CSV file that will be automatically selected on the main page. This choice will be kept until changed here or in Main import page.">
-                  <span class="tooltip-icon">i</span>
-                  <span class="tooltip-content">Set a default CSV file that will be automatically selected on the main page. This choice will be kept until changed here or in Main import page.</span>
-                </span>
+                <span class="info-icon" data-tippy-content="Set a default CSV file that will be automatically selected on the main page. This choice will be kept until changed here or in Main import page."></span>
               </div>
               <div style="display:flex;align-items:center;gap:1rem;width:100%;">
-                <div class="file-input-container">
-                  <input type="file" id="settingsDefaultFile" accept=".csv" class="enhanced-input" data-tooltip="Select a default CSV file that will be automatically loaded on the main page" />
-                  <div class="settings-file-checkbox-row">
-                    <input type="checkbox" id="saveFileNameCheckbox" class="unified-checkbox enhanced-input" data-tooltip="Save the selected file name to browser storage for future sessions" />
-                    <label for="saveFileNameCheckbox" class="settings-file-checkbox-label">
+                <div class="file-input-container" style="flex:1;">
+                  <input type="file" id="settingsDefaultFile" accept=".csv" class="enhanced-input" data-tippy-content="Select a default CSV file that will be automatically loaded on the main page" style="width:100%;height:2.5rem;font-size:1rem;padding:0.5rem 0.8rem;border-radius:6px;border:1px solid #cbd5e1;background:#f3f4f6;box-sizing:border-box;" />
+                  <div class="settings-file-checkbox-row" style="display:flex;align-items:center;margin-top:0.5rem;justify-content:flex-start;">
+                    <input type="checkbox" id="saveFileNameCheckbox" class="unified-checkbox enhanced-input" data-tippy-content="Save the selected file name to browser storage for future sessions" />
+                    <label for="saveFileNameCheckbox" class="settings-file-checkbox-label" style="font-size:0.95rem;color:#374151;cursor:pointer;user-select:none;">
                       Save file name
                       <span class="info-icon" data-tippy-content="Stores the selected file name across sessions and between pages"></span>
                     </label>
@@ -1232,7 +1229,7 @@
                     <span id="settingsSelectedFileNameText"></span>
                   </div>
                 </div>
-                <button type="button" id="clearDefaultFileBtn" class="button-tooltip" data-tooltip="Clear the default file selection" style="background:#e5e7eb;color:#0033a0;border:none;border-radius:6px;padding:0.5rem 0.9rem;font-size:1.1rem;cursor:pointer;transition:background 0.2s;">Clear</button>
+                <button type="button" id="clearDefaultFileBtn" class="button-tooltip" data-tippy-content="Clear the default file selection" style="background:#e5e7eb;color:#0033a0;border:none;border-radius:6px;padding:0.5rem 0.9rem;font-size:1.1rem;cursor:pointer;transition:background 0.2s;height:fit-content;white-space:nowrap;">Clear</button>
               </div>
               <div id="defaultFileInfo" style="font-size:0.95rem;color:#6b7280;text-align:center;margin-top:0.5rem;display:none;">
                 <span id="defaultFileName"></span>
@@ -1247,12 +1244,9 @@
             <div style="display:flex;align-items:center;gap:1.2em;">
               <label for="settingsLanguage" style="flex:0 0 150px;text-align:right;vertical-align:middle;display:flex;align-items:center;gap:0.3em;">
                 Language
-                <span class="custom-tooltip" data-tooltip="Select the language for the application interface. Supported languages: English, Spanish, French, German, Chinese.">
-                  <span class="tooltip-icon">i</span>
-                  <span class="tooltip-content">Select the language for the application interface. Supported languages: English, Spanish, French, German, Chinese.</span>
-                </span>
+                <span class="info-icon" data-tippy-content="Select the language for the application interface. Supported languages: English, Spanish, French, German, Chinese."></span>
               </label>
-              <select id="settingsLanguage" class="enhanced-input" style="flex:1;width:auto;min-width:fit-content;max-width:160px;vertical-align:middle;" data-tooltip="Select the language for the app interface">
+              <select id="settingsLanguage" class="enhanced-input" data-tippy-content="Select the language for the app interface">
                 <option value="en">English</option>
                 <option value="es">Spanish</option>
                 <option value="fr">French</option>
@@ -1263,12 +1257,9 @@
             <div style="display:flex;align-items:center;gap:1.2em;">
               <label for="settingsResultsPageSize" style="flex:0 0 150px;text-align:right;vertical-align:middle;display:flex;align-items:center;gap:0.3em;">
                 Results per page
-                <span class="custom-tooltip" data-tooltip="Set the number of results displayed per page. You can only have 25 results per page at most.">
-                  <span class="tooltip-icon">i</span>
-                  <span class="tooltip-content">Set the number of results displayed per page. You can only have 25 results per page at most.</span>
-                </span>
+                <span class="info-icon" data-tippy-content="Set the number of results displayed per page. You can only have 25 results per page at most."></span>
               </label>
-              <input type="number" id="settingsResultsPageSize" min="5" max="25" step="1" inputmode="numeric" pattern="[0-9]*" maxlength="2" oninput="if(this.value.length>2)this.value=this.value.slice(0,2);" style="flex:1;width:2.5em;min-width:0;vertical-align:middle;" title="You can only have 25 results per page at most." />
+              <input type="number" id="settingsResultsPageSize" min="5" max="25" step="1" inputmode="numeric" pattern="[0-9]*" maxlength="2" oninput="if(this.value.length>2)this.value=this.value.slice(0,2);" data-tippy-content="You can only have 25 results per page at most." />
             </div>
           </div>
         </div>
@@ -1277,30 +1268,18 @@
           <div style="margin-bottom: 1rem;">
             <label class="modify-attr-item" style="font-weight: bold;">
               <input type="checkbox" class="red-checkbox" id="modAttrSelectAll">Select all/unselect all
-              <span class="info-tooltip">
-                <span class="info-icon"></span>
-                <span class="tooltip-content">Quickly select or deselect all user attributes for modification</span>
-              </span>
+              <span class="info-icon" data-tippy-content="Quickly select or deselect all user attributes for modification"></span>
             </label>
           </div>
           <div class="modify-attr-list">
             <label class="modify-attr-item"><input type="checkbox" class="red-checkbox" id="modAttrFirstName">First Name
-              <span class="info-tooltip">
-                <span class="info-icon"></span>
-                <span class="tooltip-content">Update the user's first name during modification</span>
-              </span>
+              <span class="info-icon" data-tippy-content="Update the user's first name during modification"></span>
             </label>
             <label class="modify-attr-item"><input type="checkbox" class="red-checkbox" id="modAttrLastName">Last Name
-              <span class="info-tooltip">
-                <span class="info-icon"></span>
-                <span class="tooltip-content">Update the user's last name during modification</span>
-              </span>
+              <span class="info-icon" data-tippy-content="Update the user's last name during modification"></span>
             </label>
             <label class="modify-attr-item"><input type="checkbox" class="red-checkbox" id="modAttrEmail">Email
-              <span class="info-tooltip">
-                <span class="info-icon"></span>
-                <span class="tooltip-content">Update the user's email address during modification</span>
-              </span>
+              <span class="info-icon" data-tippy-content="Update the user's email address during modification"></span>
             </label>
             <label class="modify-attr-item"><input type="checkbox" class="red-checkbox" id="modAttrUsername">Username
               <span class="info-icon" data-tippy-content="Update the user's login username during modification"></span>
