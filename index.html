@@ -12,7 +12,7 @@
   <script src="https://unpkg.com/@popperjs/core@2"></script>
   <script src="https://unpkg.com/tippy.js@6"></script>
   <!-- Add PapaParse for CSV parsing -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.5.3/papaparse.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.5.3/papaparse.min.js" async onerror="console.error('❌ Failed to load Papa Parse from CDN')"></script>
   
   <!-- Library Loading Logger -->
   <script>
@@ -3737,7 +3737,7 @@
         
         // Wait for Papa Parse to load
         let attempts = 0;
-        const maxAttempts = 50; // 5 seconds max wait
+        const maxAttempts = 100; // 10 seconds max wait
         
         const checkPapaParse = () => {
           attempts++;
@@ -3749,8 +3749,9 @@
           }
           
           if (attempts >= maxAttempts) {
-            console.error('❌ Papa Parse failed to load after 5 seconds');
-            reject(new Error('Papa Parse library failed to load'));
+            console.error('❌ Papa Parse failed to load after 10 seconds, trying fallback...');
+            // Try to load from fallback CDN
+            loadPapaParseFallback().then(resolve).catch(reject);
             return;
           }
           
@@ -3758,6 +3759,29 @@
         };
         
         checkPapaParse();
+      });
+    }
+    
+    // Function to load Papa Parse from fallback CDN
+    function loadPapaParseFallback() {
+      return new Promise((resolve, reject) => {
+        console.log('🔄 Attempting to load Papa Parse from fallback CDN...');
+        
+        const script = document.createElement('script');
+        script.src = 'https://unpkg.com/papaparse@5.5.3/papaparse.min.js';
+        script.async = true;
+        
+        script.onload = () => {
+          console.log('✅ Papa Parse loaded from fallback CDN');
+          resolve();
+        };
+        
+        script.onerror = () => {
+          console.error('❌ Papa Parse failed to load from fallback CDN');
+          reject(new Error('Papa Parse library failed to load from all sources'));
+        };
+        
+        document.head.appendChild(script);
       });
     }
     
@@ -4029,14 +4053,98 @@
       return false;
     }
     
+    // Function to manually retry Papa Parse loading
+    async function retryPapaParseLoading() {
+      console.log('🔄 Manually retrying Papa Parse loading...');
+      
+      const statusBox = document.getElementById('statusBox');
+      if (statusBox) {
+        statusBox.innerHTML = `
+          <div class="alert alert-info">
+            <strong>Loading Papa Parse...</strong><br>
+            Attempting to load the CSV parsing library...<br>
+            <small>Please wait...</small>
+          </div>
+        `;
+      }
+      
+      try {
+        await ensurePapaParseLoaded();
+        console.log('✅ Papa Parse loaded successfully on manual retry');
+        
+        // Clear the status
+        if (statusBox) {
+          statusBox.innerHTML = '';
+        }
+        
+        // Re-count rows if a file is selected
+        const file = getSelectedFile();
+        if (file) {
+          const rowCount = await countCSVRows(file);
+          updateTotalRecordsDisplay(rowCount);
+        }
+        
+        return true;
+      } catch (error) {
+        console.error('❌ Manual Papa Parse retry failed:', error);
+        
+        if (statusBox) {
+          statusBox.innerHTML = `
+            <div class="alert alert-danger">
+              <strong>Library Loading Failed</strong><br>
+              Papa Parse library failed to load: ${error.message}<br>
+              <button onclick="retryPapaParseLoading()" class="button button-sm button-secondary">Retry Loading</button>
+              <small>If the issue persists, please check your internet connection and refresh the page.</small>
+            </div>
+          `;
+        }
+        
+        return false;
+      }
+    }
+    
     // Initialize everything when DOM is loaded
     document.addEventListener('DOMContentLoaded', async function() {
       console.log('🚀 Initializing PingOne User Management Application...');
       
       try {
-        // Ensure Papa Parse is loaded
-        await ensurePapaParseLoaded();
-        console.log('✅ Papa Parse initialization complete');
+        // Try to ensure Papa Parse is loaded, but don't fail the entire app if it doesn't
+        try {
+          await ensurePapaParseLoaded();
+          console.log('✅ Papa Parse initialization complete');
+        } catch (papaError) {
+          console.warn('⚠️ Papa Parse failed to load, but continuing with application initialization');
+          console.warn('📝 CSV functionality will be limited until Papa Parse loads');
+          
+          // Show a warning to the user
+          const statusBox = document.getElementById('statusBox');
+          if (statusBox) {
+            statusBox.innerHTML = `
+              <div class="alert alert-warning">
+                <strong>Library Loading Issue</strong><br>
+                Papa Parse library is still loading. CSV functionality may be limited.<br>
+                <button onclick="retryPapaParseLoading()" class="button button-sm button-secondary">Retry Loading</button>
+                <small>This usually resolves automatically. If the issue persists, please refresh the page.</small>
+              </div>
+            `;
+          }
+          
+          // Continue trying to load Papa Parse in the background
+          setTimeout(async () => {
+            try {
+              await ensurePapaParseLoaded();
+              console.log('✅ Papa Parse loaded successfully in background');
+              
+              // Clear the warning
+              const statusBox = document.getElementById('statusBox');
+              if (statusBox && statusBox.innerHTML.includes('Library Loading Issue')) {
+                statusBox.innerHTML = '';
+              }
+            } catch (retryError) {
+              console.error('❌ Papa Parse still failed to load after retry:', retryError);
+            }
+          }, 2000);
+        }
         
         // Initialize file input handling
         const csvFileInput = document.getElementById('csvFile');
@@ -4049,9 +4157,15 @@
             if (file) {
               console.log(`📁 File selected: ${file.name}`);
               try {
-                const rowCount = await countCSVRows(file);
-                console.log(`📊 CSV row count: ${rowCount}`);
-                updateTotalRecordsDisplay(rowCount);
+                // Only try to count rows if Papa Parse is available
+                if (typeof Papa !== 'undefined' && Papa.parse) {
+                  const rowCount = await countCSVRows(file);
+                  console.log(`📊 CSV row count: ${rowCount}`);
+                  updateTotalRecordsDisplay(rowCount);
+                } else {
+                  console.warn('⚠️ Papa Parse not available, skipping row count');
+                  updateTotalRecordsDisplay('Loading...');
+                }
               } catch (error) {
                 console.error('❌ Error counting CSV rows:', error);
                 clearTotalRecordsDisplay();
@@ -4068,6 +4182,18 @@
         console.log('✅ Application initialization complete');
       } catch (error) {
         console.error('❌ Application initialization failed:', error);
+        
+        // Show error message to user
+        const statusBox = document.getElementById('statusBox');
+        if (statusBox) {
+          statusBox.innerHTML = `
+            <div class="alert alert-danger">
+              <strong>Application Error</strong><br>
+              Failed to initialize the application: ${error.message}<br>
+              <small>Please refresh the page and try again.</small>
+            </div>
+          `;
+        }
       }
     });
   </script>
