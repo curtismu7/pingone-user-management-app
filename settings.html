@@ -1123,7 +1123,7 @@
   <script src="https://unpkg.com/@popperjs/core@2"></script>
   <script src="https://unpkg.com/tippy.js@6"></script>
   <!-- Add PapaParse for CSV parsing -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.5.3/papaparse.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.5.3/papaparse.min.js" async></script>
 </head>
 <body style="display:flex;flex-direction:row;min-height:100vh;">
   <div class="sidebar">
@@ -2290,7 +2290,7 @@
         return typeof Papa !== 'undefined' && Papa.parse;
       }
       
-      // Wait a bit for scripts to load, then check Papa Parse
+      // Wait longer for async scripts to load, then check Papa Parse
       setTimeout(() => {
         if (!checkPapaParseAvailability()) {
           console.warn('Papa Parse library not loaded. CSV parsing functionality may not work properly.');
@@ -2307,7 +2307,7 @@
         } else {
           console.log('Papa Parse library is available');
         }
-      }, 100); // Small delay to ensure scripts are loaded
+      }, 500); // Longer delay to ensure async scripts are loaded
       
       // Initialize the comprehensive form persistence system
       settingsFormPersistence = new SettingsFormPersistence();
