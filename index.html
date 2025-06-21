@@ -2058,10 +2058,12 @@
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let buffer = '';
-        let totalItems = globalCSVRowCount; // Use actual CSV row count
+        let totalItems = globalCSVRowCount;
         let currentProcessedCount = 0;
         let finalProcessedCount = 0;
-        let lastProcessedCount = 0;
+        let batchCounter = 0;
+        let successCount = 0;
+        let errorCount = 0;
         
         while (true) {
           const { done, value } = await reader.read();
@@ -2078,38 +2080,46 @@
                 
                 if (data.progress) {
                   // Handle progress updates
-                  if (data.processed !== undefined) {
+                  if (data.progress === 'started') {
+                    totalItems = data.total;
+                    currentProcessedCount = 0;
+                    updateSpinnerProgress(0, totalItems, 0, false, false);
+                  } else if (data.progress === 'processing') {
                     currentProcessedCount = data.processed;
-                    finalProcessedCount = currentProcessedCount;
-                    lastProcessedCount = currentProcessedCount;
+                    batchCounter = data.batchCounter;
+                    successCount = data.success;
+                    errorCount = data.error;
                     
+                    // Update spinner with batch counter (increments by 5)
+                    updateSpinnerProgress(currentProcessedCount, totalItems, batchCounter, false, false);
                     actionStatus.updateProgress(currentProcessedCount, totalItems);
+                  } else if (data.progress === 'complete') {
+                    finalProcessedCount = data.total;
+                    successCount = data.success;
+                    errorCount = data.errors;
+                    batchCounter = data.batchCounter;
+                    
+                    // Show completion
+                    updateSpinnerProgress(finalProcessedCount, totalItems, batchCounter, false, true);
+                    actionStatus.updateProgress(finalProcessedCount, totalItems);
+                    actionStatus.showSuccess();
+                    
+                    // Show dynamic summary
+                    showActionSummary('Imported', successCount, 0, errorCount);
+                    
+                    // Update last action status
+                    updateLastActionStatus('import', successCount, 0);
+                  } else if (data.progress === 'cancelled') {
+                    finalProcessedCount = data.processed;
+                    successCount = data.success;
+                    errorCount = data.error;
+                    
+                    actionStatus.showError(['Operation was cancelled']);
+                    updateSpinnerProgress(finalProcessedCount, totalItems, batchCounter, false, true);
                   }
-                } else if (Array.isArray(data)) {
-                  // This is the final report array
-                  totalItems = data.length;
-                  finalProcessedCount = data.length;
-                  
-                  // Parse the final report to get counts
-                  let successCount = 0;
-                  let skippedCount = 0;
-                  let errorCount = 0;
-                  
-                  data.forEach(item => {
-                    if (item.status === 'created') {
-                      successCount++;
-                    } else if (item.status === 'skipped') {
-                      skippedCount++;
-                    } else if (item.status === 'error') {
-                      errorCount++;
-                    }
-                  });
-                  
-                  // Show dynamic summary
-                  showActionSummary('Imported', successCount, skippedCount, errorCount);
-                  
-                  // Update last action status
-                  updateLastActionStatus('import', successCount, skippedCount);
+                } else if (data.error) {
+                  // Handle error response
+                  throw new Error(data.error);
                 }
               } catch (parseError) {
                 console.warn('Failed to parse response line:', line);
@@ -2118,14 +2128,10 @@
           }
         }
         
-        // Show completion message
-        actionStatus.updateProgress(finalProcessedCount, totalItems);
-        actionStatus.showSuccess();
-        
         // Show final status message with actual processed count
         const processedCount = finalProcessedCount > 0 ? finalProcessedCount : totalItems;
         if (statusSpan) {
-          statusSpan.textContent = `✅ User import completed! Imported ${processedCount} users into your PingOne environment.`;
+          statusSpan.textContent = `✅ User import completed! Imported ${successCount} users into your PingOne environment.`;
           statusSpan.style.color = '#16a34a';
         }
       } catch (error) {
@@ -2138,6 +2144,7 @@
       } finally {
         importBtn.disabled = false;
         importBtn.textContent = 'Import Users';
+        hideSpinnerModal();
       }
     }
 
@@ -2192,8 +2199,8 @@
       
       try {
         const response = await fetch('/delete-users', {
-        method: 'POST',
-        body: formData
+          method: 'POST',
+          body: formData
         });
         
         if (!response.ok) {
@@ -2201,60 +2208,73 @@
         }
         
         const reader = response.body.getReader();
-          const decoder = new TextDecoder();
-          let buffer = '';
-        let totalItems = globalCSVRowCount; // Use actual CSV row count
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let totalItems = globalCSVRowCount;
         let currentProcessedCount = 0;
         let finalProcessedCount = 0;
-        let lastProcessedCount = 0;
+        let batchCounter = 0;
+        let successCount = 0;
+        let errorCount = 0;
+        let notFoundCount = 0;
         
-          while (true) {
+        while (true) {
           const { done, value } = await reader.read();
-            if (done) break;
+          if (done) break;
           
-            buffer += decoder.decode(value, { stream: true });
+          buffer += decoder.decode(value, { stream: true });
           const lines = buffer.split('\n');
           buffer = lines.pop() || '';
           
-            for (const line of lines) {
+          for (const line of lines) {
             if (line.trim()) {
               try {
                 const data = JSON.parse(line);
                 
                 if (data.progress) {
                   // Handle progress updates
-                  if (data.deleted !== undefined) {
-                    currentProcessedCount = data.deleted;
-                    finalProcessedCount = currentProcessedCount;
-                    lastProcessedCount = currentProcessedCount;
+                  if (data.progress === 'started') {
+                    totalItems = data.total;
+                    currentProcessedCount = 0;
+                    updateSpinnerProgress(0, totalItems, 0, false, false);
+                  } else if (data.progress === 'processing') {
+                    currentProcessedCount = data.processed;
+                    batchCounter = data.batchCounter;
+                    successCount = data.success;
+                    errorCount = data.error;
+                    notFoundCount = data.notFound;
                     
+                    // Update spinner with batch counter (increments by 5)
+                    updateSpinnerProgress(currentProcessedCount, totalItems, batchCounter, false, false);
                     actionStatus.updateProgress(currentProcessedCount, totalItems);
+                  } else if (data.progress === 'complete') {
+                    finalProcessedCount = data.total;
+                    successCount = data.success;
+                    errorCount = data.errors;
+                    notFoundCount = data.notFound;
+                    batchCounter = data.batchCounter;
+                    
+                    // Show completion
+                    updateSpinnerProgress(finalProcessedCount, totalItems, batchCounter, false, true);
+                    actionStatus.updateProgress(finalProcessedCount, totalItems);
+                    actionStatus.showSuccess();
+                    
+                    // Show dynamic summary
+                    showActionSummary('Deleted', successCount, notFoundCount, errorCount);
+                    
+                    // Update last action status
+                    updateLastActionStatus('delete', successCount, notFoundCount);
+                  } else if (data.progress === 'cancelled') {
+                    finalProcessedCount = data.processed;
+                    successCount = data.success;
+                    errorCount = data.error;
+                    
+                    actionStatus.showError(['Operation was cancelled']);
+                    updateSpinnerProgress(finalProcessedCount, totalItems, batchCounter, false, true);
                   }
-                } else if (Array.isArray(data)) {
-                  // This is the final report array
-                  totalItems = data.length;
-                  finalProcessedCount = data.length;
-                  
-                  // Parse the final report to get counts
-                  let successCount = 0;
-                  let skippedCount = 0;
-                  let errorCount = 0;
-                  
-                  data.forEach(item => {
-                    if (item.status === 'deleted') {
-                      successCount++;
-                    } else if (item.status === 'not_found') {
-                      skippedCount++;
-                    } else if (item.status === 'error') {
-                      errorCount++;
-                    }
-                  });
-                  
-                  // Show dynamic summary
-                  showActionSummary('Deleted', successCount, skippedCount, errorCount);
-                  
-                  // Update last action status
-                  updateLastActionStatus('delete', successCount, skippedCount);
+                } else if (data.error) {
+                  // Handle error response
+                  throw new Error(data.error);
                 }
               } catch (parseError) {
                 console.warn('Failed to parse response line:', line);
@@ -2263,14 +2283,9 @@
           }
         }
         
-        // Show completion message
-        actionStatus.updateProgress(finalProcessedCount, totalItems);
-        actionStatus.showSuccess();
-        
         // Show final status message with actual processed count
-        const processedCount = successCount > 0 ? successCount : totalItems;
         if (statusSpan) {
-          statusSpan.textContent = `✅ User deletion completed! Deleted ${processedCount} users from your PingOne environment.`;
+          statusSpan.textContent = `✅ User deletion completed! Deleted ${successCount} users from your PingOne environment.`;
           statusSpan.style.color = '#16a34a';
         }
       } catch (error) {
@@ -2585,12 +2600,12 @@
           progress.textContent = 'Processing complete';
         } else {
           // Show batch counter if provided, otherwise use the completed count
-          const displayCount = batchCounter > 0 ? batchCounter * 5 : Math.min(completed * 5, total);
+          const displayCount = batchCounter > 0 ? batchCounter * 5 : Math.min(completed, total);
           
           if (summary) {
             progress.textContent = `📊 Summary: ${displayCount} of ${total} completed so far...`;
           } else {
-            progress.textContent = `${displayCount} of ${total} completed...`;
+            progress.textContent = `Processing ${displayCount} of ${total} users...`;
           }
         }
       }
