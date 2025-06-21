@@ -792,8 +792,8 @@
       display: inline-block;
       width: 16px;
       height: 16px;
-      background: #0033a0;
-      color: white;
+      background: #ffffff;
+      color: #0033a0;
       border-radius: 50%;
       text-align: center;
       line-height: 16px;
@@ -802,11 +802,15 @@
       cursor: help;
       margin-left: 6px;
       position: relative;
-      transition: background-color 0.2s;
+      transition: all 0.2s;
+      border: 1.5px solid #0033a0;
     }
     
     .info-icon:hover {
-      background: #002266;
+      background: #f8fafc;
+      border-color: #002266;
+      color: #002266;
+      transform: scale(1.1);
     }
     
     .info-icon::before {
