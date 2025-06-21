@@ -138,7 +138,7 @@ app.post('/get-worker-token', async (req, res) => {
       const token = await getWorkerToken(environmentId, clientId, clientSecret);
       logStatus(`/get-worker-token | success`);
       writeRunFooter(startTime);
-      res.json({ token });
+      res.json({ access_token: token });
     } catch (err) {
       logStatus(`/get-worker-token | error`);
       // Add detailed error logging for Get Worker Token failures
@@ -147,7 +147,29 @@ app.post('/get-worker-token', async (req, res) => {
       const logEntry = `${timestamp} | Get Worker Token failed | ${errorMsg}`;
       safeAppendLog(logEntry + '\n');
       writeRunFooter(startTime);
-      res.status(500).json({ error: err.message || 'Failed to get worker token.' });
+      
+      // Return more specific error messages based on the error type
+      let errorMessage = 'Failed to get worker token.';
+      if (err.response) {
+        // PingOne API error response
+        if (err.response.status === 401) {
+          errorMessage = 'Invalid credentials. Please check your Client ID and Client Secret.';
+        } else if (err.response.status === 404) {
+          errorMessage = 'Environment not found. Please check your Environment ID.';
+        } else if (err.response.status === 400) {
+          errorMessage = 'Invalid request. Please check your credentials format.';
+        } else {
+          errorMessage = `PingOne API error: ${err.response.status} - ${err.response.statusText}`;
+        }
+      } else if (err.code === 'ENOTFOUND') {
+        errorMessage = 'Network error. Please check your internet connection.';
+      } else if (err.code === 'ECONNREFUSED') {
+        errorMessage = 'Connection refused. Please try again later.';
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      res.status(500).json({ error: errorMessage });
     }
   });
 });
