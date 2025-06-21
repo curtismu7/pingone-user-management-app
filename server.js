@@ -716,6 +716,49 @@ app.post('/delete-users', upload.single('csv'), (req, res) => {
   });
 });
 
+// Log endpoints
+app.get('/import-status-log', (req, res) => {
+  try {
+    if (fs.existsSync(statusLogPath)) {
+      const logContent = fs.readFileSync(statusLogPath, 'utf8');
+      res.setHeader('Content-Type', 'text/plain');
+      res.send(logContent);
+    } else {
+      res.status(404).json({ error: 'Log file not found' });
+    }
+  } catch (error) {
+    console.error('Error reading log file:', error);
+    res.status(500).json({ error: 'Error reading log file' });
+  }
+});
+
+app.get('/download-log', (req, res) => {
+  try {
+    if (fs.existsSync(statusLogPath)) {
+      res.setHeader('Content-Disposition', 'attachment; filename="import-status.log"');
+      res.setHeader('Content-Type', 'text/plain');
+      res.sendFile(statusLogPath);
+    } else {
+      res.status(404).json({ error: 'Log file not found' });
+    }
+  } catch (error) {
+    console.error('Error downloading log file:', error);
+    res.status(500).json({ error: 'Error downloading log file' });
+  }
+});
+
+app.post('/clear-log', (req, res) => {
+  try {
+    // Create a new log file with just the header
+    const logStartTime = new Date().toLocaleString();
+    safeWriteLog(`********\n${logStartTime}\nStart of Logging\n`);
+    res.json({ success: true, message: 'Log cleared successfully' });
+  } catch (error) {
+    console.error('Error clearing log file:', error);
+    res.status(500).json({ error: 'Error clearing log file' });
+  }
+});
+
 app.listen(3001, () => {
   console.log('Server running on http://localhost:3001');
 });
