@@ -1,0 +1,96 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Run security audit
+        run: npm run security
+        
+      - name: Validate configuration
+        run: npm run validate
+        
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
+          
+      - name: Upload Release Assets
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./package.json
+          asset_name: package.json
+          asset_content_type: application/json
+          
+      - name: Create Release Notes
+        run: |
+          # Extract version from tag
+          VERSION=${GITHUB_REF#refs/tags/v}
+          
+          # Create release notes if they exist
+          if [ -f "RELEASE_NOTES_${VERSION}.md" ]; then
+            echo "## Release Notes" >> RELEASE_NOTES_${VERSION}.md
+            echo "" >> RELEASE_NOTES_${VERSION}.md
+            echo "### Installation" >> RELEASE_NOTES_${VERSION}.md
+            echo "" >> RELEASE_NOTES_${VERSION}.md
+            echo "1. Clone the repository:" >> RELEASE_NOTES_${VERSION}.md
+            echo "   \`\`\`bash" >> RELEASE_NOTES_${VERSION}.md
+            echo "   git clone https://github.com/curtismu7/pingone-user-management-app.git" >> RELEASE_NOTES_${VERSION}.md
+            echo "   cd pingone-user-management-app" >> RELEASE_NOTES_${VERSION}.md
+            echo "   git checkout v${VERSION}" >> RELEASE_NOTES_${VERSION}.md
+            echo "   \`\`\`" >> RELEASE_NOTES_${VERSION}.md
+            echo "" >> RELEASE_NOTES_${VERSION}.md
+            echo "2. Install dependencies:" >> RELEASE_NOTES_${VERSION}.md
+            echo "   \`\`\`bash" >> RELEASE_NOTES_${VERSION}.md
+            echo "   npm install" >> RELEASE_NOTES_${VERSION}.md
+            echo "   \`\`\`" >> RELEASE_NOTES_${VERSION}.md
+            echo "" >> RELEASE_NOTES_${VERSION}.md
+            echo "3. Configure environment:" >> RELEASE_NOTES_${VERSION}.md
+            echo "   \`\`\`bash" >> RELEASE_NOTES_${VERSION}.md
+            echo "   cp env.example .env" >> RELEASE_NOTES_${VERSION}.md
+            echo "   # Edit .env with your PingOne credentials" >> RELEASE_NOTES_${VERSION}.md
+            echo "   \`\`\`" >> RELEASE_NOTES_${VERSION}.md
+            echo "" >> RELEASE_NOTES_${VERSION}.md
+            echo "4. Start the application:" >> RELEASE_NOTES_${VERSION}.md
+            echo "   \`\`\`bash" >> RELEASE_NOTES_${VERSION}.md
+            echo "   npm start" >> RELEASE_NOTES_${VERSION}.md
+            echo "   \`\`\`" >> RELEASE_NOTES_${VERSION}.md
+          fi
+          
+      - name: Upload Release Notes
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./RELEASE_NOTES_${{ env.VERSION }}.md
+          asset_name: RELEASE_NOTES_${{ env.VERSION }}.md
+          asset_content_type: text/markdown
+        if: hashFiles('RELEASE_NOTES_${{ env.VERSION }}.md') != '' 

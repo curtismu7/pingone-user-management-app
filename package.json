@@ -26,7 +26,19 @@
     "validate": "node -e \"require('./config').validateConfig()\"",
     "setup": "cp env.example .env && echo 'Please edit .env with your PingOne credentials'",
     "clean": "rm -rf uploads/* && rm -f import-status.log",
-    "logs": "tail -f import-status.log"
+    "logs": "tail -f import-status.log",
+    "version:patch": "node scripts/version.js patch",
+    "version:minor": "node scripts/version.js minor",
+    "version:major": "node scripts/version.js major",
+    "version:patch:push": "node scripts/version.js patch --push",
+    "version:minor:push": "node scripts/version.js minor --push",
+    "version:major:push": "node scripts/version.js major --push",
+    "version:patch:release": "node scripts/version.js patch --push --notes",
+    "version:minor:release": "node scripts/version.js minor --push --notes",
+    "version:major:release": "node scripts/version.js major --push --notes",
+    "changelog": "node scripts/changelog.js",
+    "changelog:generate": "node scripts/changelog.js $(node -p \"require('./package.json').version\")",
+    "release:prepare": "npm run changelog:generate && npm run version:patch:release"
   },
   "dependencies": {
     "@ping-identity/p14c-js-sdk-auth": "^1.0.0-pre.2",
